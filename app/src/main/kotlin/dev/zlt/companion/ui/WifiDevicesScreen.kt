@@ -2,6 +2,8 @@ package dev.zlt.companion.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,6 +65,7 @@ import dev.zlt.companion.ui.theme.TextMuted
 import dev.zlt.companion.ui.theme.TextPrimary
 import dev.zlt.companion.ui.theme.TextSecondary
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WifiDevicesScreen(
     wifiConfig: WifiConfig?,
@@ -78,7 +81,9 @@ fun WifiDevicesScreen(
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-    var selectedSleepMinutes by remember { mutableStateOf("-1") }
+    var selectedSleepMinutes by remember(wifiConfig?.sleepMode) {
+        mutableStateOf(wifiConfig?.sleepMode?.ifEmpty { "-1" } ?: "-1")
+    }
 
     // Band selection: defaults to whatever band is active on the router (e.g. 5GHz)
     val activeBand = wifiConfig?.activeBand ?: "5GHz"
@@ -366,11 +371,20 @@ fun WifiDevicesScreen(
                         color = TextMuted,
                     )
 
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        val options = listOf("Never" to "-1", "10 min" to "10", "20 min" to "20", "30 min" to "30")
+                        val options = listOf(
+                            "Never" to "-1",
+                            "5 min" to "5",
+                            "10 min" to "10",
+                            "20 min" to "20",
+                            "30 min" to "30",
+                            "1 hour" to "60",
+                            "2 hours" to "120",
+                        )
                         for ((label, value) in options) {
                             FilterChip(
                                 selected = selectedSleepMinutes == value,

@@ -369,13 +369,14 @@ class ZltClient(
 
     suspend fun getWifiConfig(): WifiConfig {
         val data = get(
-            "wifi_band", "wifi_cur_state",
+            "wifi_band", "wifi_cur_state", "Sleep_interval",
             "SSID1", "WPAPSK1", "WPAPSK1_encode", "AuthMode", "MAX_Access_num", "HideSSID",
             "SSID1_5g", "WPAPSK1_5g", "WPAPSK1_encode_5g", "AuthMode_5g", "MAX_Access_num_5g", "HideSSID_5g",
         )
         val activeBand = if (data["wifi_band"] == "a") "5GHz" else "2.4GHz"
         val pwd24 = decodePassword(data["WPAPSK1"], data["WPAPSK1_encode"])
         val pwd5g = decodePassword(data["WPAPSK1_5g"], data["WPAPSK1_encode_5g"])
+        val sleepMode = data["Sleep_interval"].orEmpty().ifEmpty { "-1" }
 
         return WifiConfig(
             isEnabled = data["wifi_cur_state"] != "0",
@@ -390,6 +391,7 @@ class ZltClient(
             authMode5g = data["AuthMode_5g"].orEmpty().ifEmpty { "WPA3Personal" },
             maxStations5g = data["MAX_Access_num_5g"].orEmpty().ifEmpty { "10" },
             hideSsid5g = data["HideSSID_5g"] == "1",
+            sleepMode = sleepMode,
         )
     }
 
@@ -589,7 +591,13 @@ class ZltClient(
     }
 
     suspend fun setWifiSleepTime(minutes: String): Boolean {
-        val res = post(ZltProtocol.GOFORM_SET_WIFI_SLEEP, mapOf("Sleep_interval" to minutes))
+        val res = post(
+            ZltProtocol.GOFORM_SET_WIFI_SLEEP,
+            mapOf(
+                "sysIdleTimeToSleep" to minutes,
+                "Sleep_interval" to minutes,
+            ),
+        )
         return res["result"] == ZltProtocol.RESULT_SUCCESS || res["result"] == "0"
     }
 

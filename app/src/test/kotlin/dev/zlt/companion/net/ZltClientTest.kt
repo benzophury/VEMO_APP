@@ -294,4 +294,35 @@ class ZltClientTest {
         assertTrue(postBody.contains("msg_id=10%3B11%3B"))
         assertTrue(postBody.contains("tag=0"))
     }
+
+    @Test
+    fun `setWifiSleepTime posts sysIdleTimeToSleep and Sleep_interval`() = runTest {
+        router.values["token"] = "1"
+        router.queuePost("0")
+
+        val client = router.client()
+        val success = client.setWifiSleepTime("60")
+
+        assertTrue(success)
+        val postBody = router.postsSeen.last()
+        assertTrue(postBody.contains("goformId=SET_WIFI_SLEEP_INFO"))
+        assertTrue(postBody.contains("sysIdleTimeToSleep=60"))
+        assertTrue(postBody.contains("Sleep_interval=60"))
+    }
+
+    @Test
+    fun `getWifiConfig parses Sleep_interval into sleepMode`() = runTest {
+        router.values += mapOf(
+            "wifi_band" to "a",
+            "wifi_cur_state" to "1",
+            "Sleep_interval" to "120",
+            "SSID1_5g" to "VEMO_5G",
+            "WPAPSK1_5g" to "secret123",
+        )
+
+        val config = router.client().getWifiConfig()
+        assertEquals("120", config.sleepMode)
+        assertEquals("5GHz", config.activeBand)
+        assertEquals("VEMO_5G", config.ssid5g)
+    }
 }

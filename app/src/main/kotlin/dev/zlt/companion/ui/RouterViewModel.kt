@@ -342,8 +342,18 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
     fun setWifiSleepTime(minutes: String) {
         viewModelScope.launch {
             try {
-                repository.setWifiSleepTime(minutes)
-                _state.update { it.copy(actionMessage = "Wi-Fi sleep timeout updated") }
+                val ok = repository.setWifiSleepTime(minutes)
+                if (ok) {
+                    _state.update { current ->
+                        current.copy(
+                            actionMessage = "Wi-Fi sleep timeout updated",
+                            wifiConfig = current.wifiConfig?.copy(sleepMode = minutes),
+                        )
+                    }
+                    refreshWifiConfig()
+                } else {
+                    _state.update { it.copy(error = "Failed to update Wi-Fi sleep timeout") }
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(error = "Sleep mode update failed: ${e.message}") }
             }

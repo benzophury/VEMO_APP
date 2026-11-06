@@ -40,6 +40,7 @@ data class WifiConfig(
     val authMode5g: String = "WPA3Personal",
     val maxStations5g: String = "10",
     val hideSsid5g: Boolean = false,
+    val sleepMode: String = "-1",
     val ssid: String = if (activeBand == "5GHz" && ssid5g.isNotEmpty()) ssid5g else ssid24,
     val password: String = if (activeBand == "5GHz" && password5g.isNotEmpty()) password5g else password24,
     val authMode: String = if (activeBand == "5GHz" && authMode5g.isNotEmpty()) authMode5g else authMode24,
