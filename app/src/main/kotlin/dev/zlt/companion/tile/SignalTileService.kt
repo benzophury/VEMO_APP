@@ -85,7 +85,29 @@ class SignalTileService : TileService() {
         if (isLocked) unlockAndRun(open) else open.run()
     }
 
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun openApp() {
+        val intent = Intent(this, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            openAppNew(intent)
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
+        }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun openAppNew(intent: Intent) {
+        // Use PendingIntent for compatibility with Android U (UpsideDownCake) and above.
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        startActivityAndCollapse(pendingIntent)
+    }
         val intent = Intent(this, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -98,8 +120,14 @@ class SignalTileService : TileService() {
                 ),
             )
         } else {
-            @Suppress("DEPRECATION")
-            startActivityAndCollapse(intent)
+            // Use PendingIntent for compatibility with Android U (UpsideDownCake) and above.
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            startActivityAndCollapse(pendingIntent)
         }
     }
 

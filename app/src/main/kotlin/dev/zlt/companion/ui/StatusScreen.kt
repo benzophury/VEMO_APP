@@ -42,7 +42,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.shrinkOut
 import dev.zlt.companion.R
 import dev.zlt.companion.data.ConnectionState
 import dev.zlt.companion.data.NetModeState
@@ -74,6 +79,8 @@ fun StatusScreen(
     onExitDemo: () -> Unit,
     onReboot: () -> Unit = {},
     onToggleData: () -> Unit = {},
+    onSaveQuota: (Boolean, String, String, Int) -> Unit = { _, _, _, _ -> },
+    onResetTraffic: () -> Unit = {},
     modeControl: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -147,7 +154,12 @@ fun StatusScreen(
 
             // 2. Data Quota Donut Gauge Widget
             val monthlyBytes = state.status?.monthlyTotalBytes ?: 0L
-            DataQuotaGauge(monthlyBytes = monthlyBytes)
+            DataQuotaGauge(
+                monthlyBytes = monthlyBytes,
+                quotaConfig = state.dataQuotaConfig,
+                onSaveQuota = onSaveQuota,
+                onResetTraffic = onResetTraffic,
+            )
 
             // 3. Cellular Data Connection Switch Card
             state.status?.let { status ->

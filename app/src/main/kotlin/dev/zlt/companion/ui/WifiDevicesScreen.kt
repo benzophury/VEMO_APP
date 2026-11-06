@@ -29,7 +29,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -71,7 +70,8 @@ fun WifiDevicesScreen(
     isLoadingStations: Boolean,
     togglingWifi: Boolean,
     onToggleWifi: () -> Unit,
-    onSaveWifiSettings: (String, String) -> Unit,
+    onSaveWifiSettings: (String, String, String) -> Unit,
+    onSwitchBand: (String) -> Unit = {},
     onSetSleepTime: (String) -> Unit = {},
     onRefreshStations: () -> Unit,
     modifier: Modifier = Modifier,
@@ -79,8 +79,36 @@ fun WifiDevicesScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
     var selectedSleepMinutes by remember { mutableStateOf("-1") }
+
+    // Band selection: defaults to whatever band is active on the router (e.g. 5GHz)
+    val activeBand = wifiConfig?.activeBand ?: "5GHz"
+    var viewingBand by remember(wifiConfig?.activeBand) { mutableStateOf(activeBand) }
+
     val clipboardManager = LocalClipboardManager.current
     val isWifiOn = wifiConfig?.isEnabled == true
+
+    // Current credentials for the viewed band
+    val is5g = viewingBand == "5GHz"
+    val currentSsid = if (is5g) {
+        wifiConfig?.ssid5g?.ifEmpty { wifiConfig.ssid } ?: ""
+    } else {
+        wifiConfig?.ssid24?.ifEmpty { wifiConfig.ssid } ?: ""
+    }
+    val currentPassword = if (is5g) {
+        wifiConfig?.password5g?.ifEmpty { wifiConfig.password } ?: ""
+    } else {
+        wifiConfig?.password24?.ifEmpty { wifiConfig.password } ?: ""
+    }
+    val currentAuth = if (is5g) {
+        wifiConfig?.authMode5g?.ifEmpty { "WPA3Personal" } ?: "WPA3Personal"
+    } else {
+        wifiConfig?.authMode24?.ifEmpty { "WPA2PSK" } ?: "WPA2PSK"
+    }
+    val currentMaxStations = if (is5g) {
+        wifiConfig?.maxStations5g ?: "10"
+    } else {
+        wifiConfig?.maxStations24 ?: "10"
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -112,7 +140,6 @@ fun WifiDevicesScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(
                             imageVector = if (isWifiOn) Icons.Default.Wifi else Icons.Default.WifiOff,
@@ -122,13 +149,13 @@ fun WifiDevicesScreen(
                         )
                         Column {
                             Text(
-                                text = "Wi-Fi Hotspot",
+                                text = "Wi-Fi Hotspot Radio",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
                             )
                             Text(
-                                text = if (isWifiOn) "Active (${stations.size} clients connected)" else "Radio Disabled",
+                                text = if (isWifiOn) "Broadcasting on $activeBand (${stations.size} clients)" else "Radio Disabled",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isWifiOn) NeonGreen else TextMuted,
                             )
@@ -152,7 +179,7 @@ fun WifiDevicesScreen(
                 }
             }
 
-            // Wi-Fi Credentials Card
+            // Wi-Fi Credentials & Dual-Band Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
@@ -160,7 +187,7 @@ fun WifiDevicesScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -179,6 +206,61 @@ fun WifiDevicesScreen(
                         }
                     }
 
+                    // Dual-Band Pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = viewingBand == "5GHz",
+                            onClick = { viewingBand = "5GHz" },
+                            label = {
+                                Text(
+                                    text = if (activeBand == "5GHz") "5 GHz (Active)" else "5 GHz",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonCyan,
+                                selectedLabelColor = Color.Black,
+                                containerColor = DarkSurfaceElevated,
+                                labelColor = TextSecondary,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        FilterChip(
+                            selected = viewingBand == "2.4GHz",
+                            onClick = { viewingBand = "2.4GHz" },
+                            label = {
+                                Text(
+                                    text = if (activeBand == "2.4GHz") "2.4 GHz (Active)" else "2.4 GHz",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = NeonCyan,
+                                selectedLabelColor = Color.Black,
+                                containerColor = DarkSurfaceElevated,
+                                labelColor = TextSecondary,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    // Inactive band switch button
+                    if (viewingBand != activeBand) {
+                        OutlinedButton(
+                            onClick = { onSwitchBand(viewingBand) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                        ) {
+                            Text("Switch Hotspot Radio to $viewingBand", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    // SSID
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -186,13 +268,14 @@ fun WifiDevicesScreen(
                     ) {
                         Text(text = "SSID (Network Name)", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
                         Text(
-                            text = wifiConfig?.ssid?.ifEmpty { "—" } ?: "—",
+                            text = currentSsid.ifEmpty { "—" },
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
                         )
                     }
 
+                    // Password
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -200,9 +283,8 @@ fun WifiDevicesScreen(
                     ) {
                         Text(text = "Password", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val pwd = wifiConfig?.password.orEmpty()
                             Text(
-                                text = if (passwordVisible) pwd else "••••••••",
+                                text = if (passwordVisible) currentPassword else "••••••••",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
@@ -215,34 +297,38 @@ fun WifiDevicesScreen(
                                     tint = TextSecondary,
                                 )
                             }
-                            if (pwd.isNotEmpty()) {
-                                IconButton(onClick = { clipboardManager.setText(AnnotatedString(pwd)) }) {
+                            if (currentPassword.isNotEmpty()) {
+                                IconButton(onClick = { clipboardManager.setText(AnnotatedString(currentPassword)) }) {
                                     Icon(Icons.Default.ContentCopy, contentDescription = "Copy password", tint = NeonCyan)
                                 }
                             }
                         }
                     }
 
+                    // Security Mode
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(text = "Security Mode", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
                         Text(
-                            text = wifiConfig?.authMode?.ifEmpty { "WPA2PSK" } ?: "WPA2PSK",
+                            text = currentAuth,
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = FontFamily.Monospace,
                             color = TextPrimary,
                         )
                     }
 
+                    // Max Clients
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(text = "Max Devices Allowed", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
+                        Text(text = "Max Allowed Devices", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
                         Text(
-                            text = "${wifiConfig?.maxStations ?: "10"} clients",
+                            text = "$currentMaxStations clients",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextPrimary,
                         )
@@ -250,7 +336,7 @@ fun WifiDevicesScreen(
                 }
             }
 
-            // Wi-Fi Sleep Timeout Card
+            // Wi-Fi Sleep Mode Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
@@ -258,23 +344,24 @@ fun WifiDevicesScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.Default.Bedtime, contentDescription = null, tint = NeonMagenta)
+                        Icon(Icons.Default.Bedtime, contentDescription = null, tint = NeonMagenta, modifier = Modifier.size(20.dp))
                         Text(
-                            text = "WI-FI SLEEP TIMEOUT",
+                            text = "WI-FI SLEEP MODE",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
                             color = TextSecondary,
-                            letterSpacing = 1.sp,
                         )
                     }
+
                     Text(
-                        text = "Turn off Wi-Fi when no devices are connected to conserve power:",
+                        text = "Automatically shut down Wi-Fi radio when no devices are connected to conserve battery.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted,
                     )
@@ -283,17 +370,18 @@ fun WifiDevicesScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("-1" to "Never", "5" to "5 min", "10" to "10 min", "20" to "20 min").forEach { (valStr, label) ->
+                        val options = listOf("Never" to "-1", "10 min" to "10", "20 min" to "20", "30 min" to "30")
+                        for ((label, value) in options) {
                             FilterChip(
-                                selected = selectedSleepMinutes == valStr,
+                                selected = selectedSleepMinutes == value,
                                 onClick = {
-                                    selectedSleepMinutes = valStr
-                                    onSetSleepTime(valStr)
+                                    selectedSleepMinutes = value
+                                    onSetSleepTime(value)
                                 },
-                                label = { Text(label) },
+                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = NeonMagenta.copy(alpha = 0.25f),
-                                    selectedLabelColor = NeonMagenta,
+                                    selectedContainerColor = NeonMagenta,
+                                    selectedLabelColor = Color.Black,
                                     containerColor = DarkSurfaceElevated,
                                     labelColor = TextSecondary,
                                 ),
@@ -303,7 +391,7 @@ fun WifiDevicesScreen(
                 }
             }
 
-            // Connected Devices Card
+            // Connected Clients Section
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
@@ -322,34 +410,36 @@ fun WifiDevicesScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(Icons.Default.Devices, contentDescription = null, tint = NeonCyan)
+                            Icon(Icons.Default.Devices, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
                             Text(
                                 text = "CONNECTED CLIENTS (${stations.size})",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp,
                                 color = TextSecondary,
-                                letterSpacing = 1.sp,
                             )
                         }
                         IconButton(onClick = onRefreshStations, enabled = !isLoadingStations) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh devices", tint = TextSecondary)
+                            if (isLoadingStations) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = NeonCyan)
+                            } else {
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh clients", tint = TextSecondary)
+                            }
                         }
                     }
 
-                    if (isLoadingStations) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = NeonCyan)
-                    }
-
-                    if (stations.isEmpty() && !isLoadingStations) {
+                    if (stations.isEmpty()) {
                         Text(
-                            text = "No devices currently connected to this hotspot.",
+                            text = if (isWifiOn) "No client devices connected." else "Wi-Fi is off.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextMuted,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier.padding(vertical = 12.dp),
                         )
                     } else {
-                        stations.forEach { station ->
-                            StationItem(station)
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (station in stations) {
+                                StationCard(station)
+                            }
                         }
                     }
                 }
@@ -357,21 +447,23 @@ fun WifiDevicesScreen(
         }
     }
 
-    if (showEditDialog && wifiConfig != null) {
+    if (showEditDialog) {
         EditWifiDialog(
-            currentSsid = wifiConfig.ssid,
-            currentPassword = wifiConfig.password,
+            bandName = viewingBand,
+            currentSsid = currentSsid,
+            currentPassword = currentPassword,
+            currentAuth = currentAuth,
             onDismiss = { showEditDialog = false },
-            onConfirm = { newSsid, newPwd ->
+            onConfirm = { newSsid, newPassword, newAuth ->
+                onSaveWifiSettings(newSsid, newPassword, newAuth)
                 showEditDialog = false
-                onSaveWifiSettings(newSsid, newPwd)
             },
         )
     }
 }
 
 @Composable
-private fun StationItem(station: ConnectedStation) {
+private fun StationCard(station: ConnectedStation) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
         border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
@@ -422,39 +514,54 @@ private fun StationItem(station: ConnectedStation) {
 
 @Composable
 private fun EditWifiDialog(
+    bandName: String,
     currentSsid: String,
     currentPassword: String,
+    currentAuth: String,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit,
+    onConfirm: (String, String, String) -> Unit,
 ) {
     var ssid by remember { mutableStateOf(currentSsid) }
     var password by remember { mutableStateOf(currentPassword) }
+    var authMode by remember { mutableStateOf(currentAuth) }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Configure Wi-Fi", color = TextPrimary) },
+        containerColor = DarkSurfaceElevated,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary,
+        title = { Text("Configure $bandName Wi-Fi", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 OutlinedTextField(
                     value = ssid,
                     onValueChange = { ssid = it },
-                    label = { Text("Wi-Fi SSID") },
+                    label = { Text("Network Name (SSID)") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonCyan,
                         unfocusedBorderColor = DarkSurfaceBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedLabelColor = NeonCyan,
+                        unfocusedLabelColor = TextMuted,
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
+
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Wi-Fi Password") },
+                    label = { Text("Wi-Fi Password (WPA/WPA2/WPA3)") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonCyan,
                         unfocusedBorderColor = DarkSurfaceBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedLabelColor = NeonCyan,
+                        unfocusedLabelColor = TextMuted,
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
@@ -467,8 +574,34 @@ private fun EditWifiDialog(
                         }
                     },
                 )
+
+                // Auth mode selector
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Security Mode", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val modes = if (bandName == "5GHz") {
+                            listOf("WPA3Personal", "WPA2PSK", "WPA2WPA3")
+                        } else {
+                            listOf("WPA2PSK", "WPAPSKWPA2PSK")
+                        }
+                        for (mode in modes) {
+                            FilterChip(
+                                selected = authMode == mode,
+                                onClick = { authMode = mode },
+                                label = { Text(mode, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = NeonCyan,
+                                    selectedLabelColor = Color.Black,
+                                    containerColor = DarkSurface,
+                                    labelColor = TextSecondary,
+                                ),
+                            )
+                        }
+                    }
+                }
+
                 Text(
-                    text = "Saving will momentarily restart the Wi-Fi AP radio.",
+                    text = "Saving will momentarily restart the $bandName Wi-Fi radio.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )
@@ -476,16 +609,16 @@ private fun EditWifiDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(ssid, password) },
+                onClick = { onConfirm(ssid, password, authMode) },
                 enabled = ssid.isNotBlank() && password.length >= 8,
                 colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = Color.Black),
             ) {
-                Text("Save & Apply")
+                Text("Save & Apply", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = TextSecondary)
             }
         },
     )

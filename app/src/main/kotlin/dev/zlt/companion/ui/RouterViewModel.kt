@@ -93,7 +93,10 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
     fun selectTab(tab: AppTab) {
         _state.update { it.copy(selectedTab = tab) }
         when (tab) {
-            AppTab.DASHBOARD -> refresh()
+            AppTab.DASHBOARD -> {
+                refresh()
+                refreshDataQuota()
+            }
             AppTab.WIFI_DEVICES -> {
                 refreshWifiConfig()
                 refreshStations()
@@ -160,6 +163,7 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
 
                 // Refresh active tab secondary data
                 when (_state.value.selectedTab) {
+                    AppTab.DASHBOARD -> refreshDataQuota()
                     AppTab.WIFI_DEVICES -> {
                         refreshWifiConfig()
                         refreshStations()
@@ -262,6 +266,68 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(error = "Failed to save Wi-Fi: ${e.message}") }
+            }
+        }
+    }
+
+    fun setWifiBand(band: String) {
+        viewModelScope.launch {
+            try {
+                val ok = repository.setWifiBand(band)
+                if (ok) {
+                    refreshWifiConfig()
+                    _state.update { it.copy(actionMessage = "Switched Wi-Fi band to $band") }
+                } else {
+                    _state.update { it.copy(error = "Router rejected Wi-Fi band switch") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Band switch failed: ${e.message}") }
+            }
+        }
+    }
+
+    fun refreshDataQuota() {
+        viewModelScope.launch {
+            try {
+                val quota = repository.getDataQuotaConfig()
+                _state.update { it.copy(dataQuotaConfig = quota) }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun saveDataQuota(enabled: Boolean, limitValue: String, unitMultiplier: String = "1024", alertPercent: Int = 90) {
+        viewModelScope.launch {
+            try {
+                val ok = repository.setDataQuotaConfig(enabled, limitValue, unitMultiplier, alertPercent)
+                if (ok) {
+                    val updated = repository.getDataQuotaConfig()
+                    _state.update {
+                        it.copy(
+                            dataQuotaConfig = updated,
+                            actionMessage = "Data quota settings saved",
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(error = "Router rejected data quota setting") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Failed to save data quota: ${e.message}") }
+            }
+        }
+    }
+
+    fun resetTrafficCalibration() {
+        viewModelScope.launch {
+            try {
+                val ok = repository.resetTrafficCalibration()
+                if (ok) {
+                    refresh()
+                    _state.update { it.copy(actionMessage = "Traffic statistics calibrated/reset") }
+                } else {
+                    _state.update { it.copy(error = "Failed to calibrate traffic") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Calibration error: ${e.message}") }
             }
         }
     }

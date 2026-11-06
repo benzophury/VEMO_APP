@@ -183,6 +183,10 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                         onExitDemo = { viewModel.setDemoMode(false) },
                         onReboot = { viewModel.rebootRouter() },
                         onToggleData = { viewModel.toggleMobileData() },
+                        onSaveQuota = { enabled, limitVal, unitMult, alertPct ->
+                            viewModel.saveDataQuota(enabled, limitVal, unitMult, alertPct)
+                        },
+                        onResetTraffic = { viewModel.resetTrafficCalibration() },
                         modeControl = {
                             ModeControl(
                                 mode = state.mode,
@@ -199,7 +203,8 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                         isLoadingStations = state.isLoadingStations,
                         togglingWifi = state.togglingWifi,
                         onToggleWifi = { viewModel.toggleWifi() },
-                        onSaveWifiSettings = { ssid, pwd -> viewModel.saveWifiSettings(ssid, pwd) },
+                        onSaveWifiSettings = { ssid, pwd, auth -> viewModel.saveWifiSettings(ssid, pwd, auth) },
+                        onSwitchBand = { band -> viewModel.setWifiBand(band) },
                         onSetSleepTime = { mins -> viewModel.setWifiSleepTime(mins) },
                         onRefreshStations = { viewModel.refreshStations() },
                     )
