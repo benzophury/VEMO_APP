@@ -251,6 +251,8 @@ private fun AppRoot(
                             onRefresh = { viewModel.refreshSms() },
                             onSendSms = { num, msg -> viewModel.sendSms(num, msg) },
                             onDeleteSms = { id -> viewModel.deleteSms(id) },
+                            onMarkAllRead = { viewModel.markAllSmsAsRead() },
+                            onMarkAsRead = { id -> viewModel.markSmsAsRead(id) },
                         )
                     }
                     AppTab.TOOLS -> {

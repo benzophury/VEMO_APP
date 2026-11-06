@@ -150,6 +150,8 @@ class RouterRepository(
 
     suspend fun deleteSms(id: String): Boolean = client().deleteSms(id)
 
+    suspend fun markSmsAsRead(ids: List<String>): Boolean = client().markSmsAsRead(ids)
+
     suspend fun getWifiConfig(): WifiConfig = client().getWifiConfig()
 
     suspend fun setWifiEnabled(enabled: Boolean): Boolean = client().setWifiEnabled(enabled)

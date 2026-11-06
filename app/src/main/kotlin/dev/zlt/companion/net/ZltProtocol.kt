@@ -41,6 +41,7 @@ object ZltProtocol {
     const val GOFORM_SET_WIFI_SLEEP = "SET_WIFI_SLEEP_INFO"
     const val GOFORM_SEND_SMS = "SEND_SMS"
     const val GOFORM_DELETE_SMS = "DELETE_SMS"
+    const val GOFORM_SET_MSG_READ = "SET_MSG_READ"
     const val GOFORM_USSD = "USSD_PROCESS"
     const val GOFORM_SET_CONNECTION_MODE = "SET_CONNECTION_MODE"
     const val GOFORM_APN = "APN_PROC_EX"

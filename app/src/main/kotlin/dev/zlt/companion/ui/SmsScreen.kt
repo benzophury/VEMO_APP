@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Refresh
@@ -36,6 +37,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +71,8 @@ fun SmsScreen(
     onRefresh: () -> Unit,
     onSendSms: (String, String) -> Unit,
     onDeleteSms: (String) -> Unit,
+    onMarkAllRead: () -> Unit = {},
+    onMarkAsRead: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var showComposeDialog by remember { mutableStateOf(false) }
@@ -133,8 +137,33 @@ fun SmsScreen(
                         }
                     }
                 }
-                IconButton(onClick = onRefresh, enabled = !isLoading) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh SMS", tint = TextSecondary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (unreadCount > 0) {
+                        TextButton(
+                            onClick = onMarkAllRead,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Done,
+                                contentDescription = "Mark all read",
+                                tint = NeonCyan,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+                            Text(
+                                "Mark all read",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan,
+                            )
+                        }
+                    }
+                    IconButton(onClick = onRefresh, enabled = !isLoading) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh SMS", tint = TextSecondary)
+                    }
                 }
             }
 
@@ -168,6 +197,7 @@ fun SmsScreen(
                                 clipboardManager.setText(AnnotatedString(sms.decodedContent))
                             },
                             onDelete = { messageToDelete = sms },
+                            onMarkRead = { onMarkAsRead(sms.id) },
                         )
                     }
                 }
@@ -217,6 +247,7 @@ private fun SmsCard(
     sms: SmsItem,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
+    onMarkRead: () -> Unit = {},
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -281,6 +312,16 @@ private fun SmsCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (sms.isUnread) {
+                    IconButton(onClick = onMarkRead, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Done,
+                            contentDescription = "Mark as read",
+                            modifier = Modifier.size(18.dp),
+                            tint = NeonCyan,
+                        )
+                    }
+                }
                 IconButton(onClick = onCopy, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.ContentCopy,

@@ -418,6 +418,35 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun markAllSmsAsRead() {
+        viewModelScope.launch {
+            val unreadIds = _state.value.smsList.filter { it.isUnread }.map { it.id }
+            if (unreadIds.isEmpty()) return@launch
+            try {
+                val ok = repository.markSmsAsRead(unreadIds)
+                if (ok) {
+                    refreshSms()
+                    _state.update { it.copy(actionMessage = "Marked ${unreadIds.size} message(s) as read") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Failed to mark read: ${e.message}") }
+            }
+        }
+    }
+
+    fun markSmsAsRead(id: String) {
+        viewModelScope.launch {
+            try {
+                val ok = repository.markSmsAsRead(listOf(id))
+                if (ok) {
+                    refreshSms()
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Failed to mark read: ${e.message}") }
+            }
+        }
+    }
+
     fun sendUssd(code: String, isReply: Boolean) {
         _state.update { it.copy(isLoadingUssd = true, error = null) }
         viewModelScope.launch {

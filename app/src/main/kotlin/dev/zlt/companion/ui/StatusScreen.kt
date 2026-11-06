@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +69,7 @@ import dev.zlt.companion.ui.theme.TextPrimary
 import dev.zlt.companion.ui.theme.TextSecondary
 import dev.zlt.companion.ui.widgets.DataQuotaGauge
 import dev.zlt.companion.ui.widgets.LiveSpeedChart
+import dev.zlt.companion.util.AppLauncher
 import java.text.DateFormat
 import java.util.Date
 
@@ -254,6 +257,7 @@ private fun Header(
         )
     }
 
+    val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -267,12 +271,42 @@ private fun Header(
                 letterSpacing = 1.sp,
                 color = TextPrimary,
             )
-            Text(
-                text = "$operator • $host",
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "$operator • $host",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Surface(
+                    onClick = { AppLauncher.launchCarrierApp(context) },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
+                    color = NeonYellow.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonYellow.copy(alpha = 0.5f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Launch,
+                            contentDescription = "Open Carrier App",
+                            tint = NeonYellow,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Text(
+                            text = "Skitto",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonYellow,
+                        )
+                    }
+                }
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onRefresh, enabled = !isRefreshing) {

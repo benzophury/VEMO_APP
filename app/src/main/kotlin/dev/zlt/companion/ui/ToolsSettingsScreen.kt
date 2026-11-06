@@ -13,7 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lan
+import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
@@ -41,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -58,6 +61,7 @@ import dev.zlt.companion.ui.theme.NeonRed
 import dev.zlt.companion.ui.theme.NeonYellow
 import dev.zlt.companion.ui.theme.TextMuted
 import dev.zlt.companion.ui.theme.TextPrimary
+import dev.zlt.companion.util.AppLauncher
 import dev.zlt.companion.ui.theme.TextSecondary
 
 @Composable
@@ -107,6 +111,49 @@ fun ToolsSettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted,
                     )
+                }
+            }
+
+            // Carrier Self-Care App Card
+            val context = LocalContext.current
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = NeonYellow)
+                        Text(
+                            text = "CARRIER APP (SKITTO)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary,
+                            letterSpacing = 1.sp,
+                        )
+                    }
+
+                    Text(
+                        text = "Quickly launch Skitto self-care app to reload balance, buy data bundles, and check validity.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted,
+                    )
+
+                    Button(
+                        onClick = { AppLauncher.launchCarrierApp(context) },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonYellow, contentColor = Color.Black),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                        Text("Open Skitto App", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 

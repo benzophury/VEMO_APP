@@ -347,6 +347,16 @@ class ZltClient(
         return res["result"] == ZltProtocol.RESULT_SUCCESS || res["result"] == "0"
     }
 
+    suspend fun markSmsAsRead(ids: List<String>): Boolean {
+        if (ids.isEmpty()) return true
+        val msgIds = ids.joinToString(";") + ";"
+        val res = post(
+            ZltProtocol.GOFORM_SET_MSG_READ,
+            mapOf("msg_id" to msgIds, "tag" to "0", "notCallback" to "true"),
+        )
+        return res["result"] == ZltProtocol.RESULT_SUCCESS || res["result"] == "0"
+    }
+
     private fun decodePassword(raw: String?, b64: String?): String {
         if (!raw.isNullOrEmpty()) return raw
         if (!b64.isNullOrEmpty()) {

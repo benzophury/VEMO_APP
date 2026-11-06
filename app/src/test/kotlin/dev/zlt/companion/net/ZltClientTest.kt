@@ -279,4 +279,19 @@ class ZltClientTest {
 
         assertNull(router.requestsSeen.last().getHeader("Cookie"))
     }
+
+    @Test
+    fun `markSmsAsRead posts semicolon-delimited ids and tag 0`() = runTest {
+        router.values["token"] = "1"
+        router.queuePost("0")
+
+        val client = router.client()
+        val success = client.markSmsAsRead(listOf("10", "11"))
+
+        assertTrue(success)
+        val postBody = router.postsSeen.last()
+        assertTrue(postBody.contains("goformId=SET_MSG_READ"))
+        assertTrue(postBody.contains("msg_id=10%3B11%3B"))
+        assertTrue(postBody.contains("tag=0"))
+    }
 }
