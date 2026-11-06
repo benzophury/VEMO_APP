@@ -3,6 +3,12 @@ package dev.zlt.companion.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,6 +21,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -135,7 +142,10 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                         if (unreadCount > 0) {
                             BadgedBox(
                                 badge = {
-                                    Badge(containerColor = NeonCyan, contentColor = Color.Black) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ) {
                                         Text(unreadCount.toString())
                                     }
                                 },
@@ -172,72 +182,82 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            when (state.selectedTab) {
-                AppTab.DASHBOARD -> {
-                    StatusScreen(
-                        state = state,
-                        host = current.host,
-                        demoMode = current.demoMode,
-                        onRefresh = { viewModel.refresh() },
-                        onOpenSettings = { settingsOpen = true },
-                        onExitDemo = { viewModel.setDemoMode(false) },
-                        onReboot = { viewModel.rebootRouter() },
-                        onToggleData = { viewModel.toggleMobileData() },
-                        onSaveQuota = { enabled, limitVal, unitMult, alertPct ->
-                            viewModel.saveDataQuota(enabled, limitVal, unitMult, alertPct)
-                        },
-                        onResetTraffic = { viewModel.resetTrafficCalibration() },
-                        modeControl = {
-                            ModeControl(
-                                mode = state.mode,
-                                changingMode = state.changingMode,
-                                onSelect = viewModel::setMode,
-                            )
-                        },
-                    )
-                }
-                AppTab.WIFI_DEVICES -> {
-                    WifiDevicesScreen(
-                        wifiConfig = state.wifiConfig,
-                        stations = state.stations,
-                        isLoadingStations = state.isLoadingStations,
-                        togglingWifi = state.togglingWifi,
-                        onToggleWifi = { viewModel.toggleWifi() },
-                        onSaveWifiSettings = { ssid, pwd, auth -> viewModel.saveWifiSettings(ssid, pwd, auth) },
-                        onSwitchBand = { band -> viewModel.setWifiBand(band) },
-                        onSetSleepTime = { mins -> viewModel.setWifiSleepTime(mins) },
-                        onRefreshStations = { viewModel.refreshStations() },
-                    )
-                }
-                AppTab.SMS -> {
-                    SmsScreen(
-                        smsList = state.smsList,
-                        isLoading = state.isLoadingSms,
-                        isSending = state.isSendingSms,
-                        onRefresh = { viewModel.refreshSms() },
-                        onSendSms = { num, msg -> viewModel.sendSms(num, msg) },
-                        onDeleteSms = { id -> viewModel.deleteSms(id) },
-                    )
-                }
-                AppTab.USSD -> {
-                    UssdScreen(
-                        ussdResult = state.ussdResult,
-                        isLoading = state.isLoadingUssd,
-                        onSendUssd = { code, isReply -> viewModel.sendUssd(code, isReply) },
-                        onClear = { viewModel.clearUssd() },
-                    )
-                }
-                AppTab.TOOLS -> {
-                    ToolsSettingsScreen(
-                        networkSettings = state.networkSettings,
-                        lanSettings = state.lanSettings,
-                        onSaveNetworkSettings = { mode, roam -> viewModel.saveNetworkSettings(mode, roam) },
-                        onSaveLanSettings = { lan -> viewModel.saveLanSettings(lan) },
-                        onSaveApn = { name, apn, auth -> viewModel.saveApn(name, apn, auth) },
-                        onChangePassword = { old, new -> viewModel.changeAdminPassword(old, new) },
-                        onFactoryReset = { viewModel.factoryReset() },
-                        onReboot = { viewModel.rebootRouter() },
-                    )
+            AnimatedContent(
+                targetState = state.selectedTab,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200, delayMillis = 30)) +
+                        scaleIn(initialScale = 0.98f, animationSpec = tween(200, delayMillis = 30)) togetherWith
+                        fadeOut(animationSpec = tween(140))
+                },
+                label = "TabTransition"
+            ) { targetTab ->
+                when (targetTab) {
+                    AppTab.DASHBOARD -> {
+                        StatusScreen(
+                            state = state,
+                            host = current.host,
+                            demoMode = current.demoMode,
+                            onRefresh = { viewModel.refresh() },
+                            onOpenSettings = { settingsOpen = true },
+                            onExitDemo = { viewModel.setDemoMode(false) },
+                            onReboot = { viewModel.rebootRouter() },
+                            onToggleData = { viewModel.toggleMobileData() },
+                            onSaveQuota = { enabled, limitVal, unitMult, alertPct ->
+                                viewModel.saveDataQuota(enabled, limitVal, unitMult, alertPct)
+                            },
+                            onResetTraffic = { viewModel.resetTrafficCalibration() },
+                            modeControl = {
+                                ModeControl(
+                                    mode = state.mode,
+                                    changingMode = state.changingMode,
+                                    onSelect = viewModel::setMode,
+                                )
+                            },
+                        )
+                    }
+                    AppTab.WIFI_DEVICES -> {
+                        WifiDevicesScreen(
+                            wifiConfig = state.wifiConfig,
+                            stations = state.stations,
+                            isLoadingStations = state.isLoadingStations,
+                            togglingWifi = state.togglingWifi,
+                            onToggleWifi = { viewModel.toggleWifi() },
+                            onSaveWifiSettings = { ssid, pwd, auth -> viewModel.saveWifiSettings(ssid, pwd, auth) },
+                            onSwitchBand = { band -> viewModel.setWifiBand(band) },
+                            onSetSleepTime = { mins -> viewModel.setWifiSleepTime(mins) },
+                            onRefreshStations = { viewModel.refreshStations() },
+                        )
+                    }
+                    AppTab.SMS -> {
+                        SmsScreen(
+                            smsList = state.smsList,
+                            isLoading = state.isLoadingSms,
+                            isSending = state.isSendingSms,
+                            onRefresh = { viewModel.refreshSms() },
+                            onSendSms = { num, msg -> viewModel.sendSms(num, msg) },
+                            onDeleteSms = { id -> viewModel.deleteSms(id) },
+                        )
+                    }
+                    AppTab.USSD -> {
+                        UssdScreen(
+                            ussdResult = state.ussdResult,
+                            isLoading = state.isLoadingUssd,
+                            onSendUssd = { code, isReply -> viewModel.sendUssd(code, isReply) },
+                            onClear = { viewModel.clearUssd() },
+                        )
+                    }
+                    AppTab.TOOLS -> {
+                        ToolsSettingsScreen(
+                            networkSettings = state.networkSettings,
+                            lanSettings = state.lanSettings,
+                            onSaveNetworkSettings = { mode, roam -> viewModel.saveNetworkSettings(mode, roam) },
+                            onSaveLanSettings = { lan -> viewModel.saveLanSettings(lan) },
+                            onSaveApn = { name, apn, auth -> viewModel.saveApn(name, apn, auth) },
+                            onChangePassword = { old, new -> viewModel.changeAdminPassword(old, new) },
+                            onFactoryReset = { viewModel.factoryReset() },
+                            onReboot = { viewModel.rebootRouter() },
+                        )
+                    }
                 }
             }
         }
@@ -246,8 +266,8 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
 
 @Composable
 private fun navigationItemColors() = NavigationBarItemDefaults.colors(
-    selectedIconColor = NeonCyan,
-    selectedTextColor = NeonCyan,
+    selectedIconColor = MaterialTheme.colorScheme.primary,
+    selectedTextColor = MaterialTheme.colorScheme.primary,
     unselectedIconColor = TextMuted,
     unselectedTextColor = TextMuted,
     indicatorColor = DarkSurfaceElevated,

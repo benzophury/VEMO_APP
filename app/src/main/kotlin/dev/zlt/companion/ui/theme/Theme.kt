@@ -33,7 +33,22 @@ private val DarkScheme = darkColorScheme(
 
 @Composable
 fun ZltTheme(
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = AmoledColorScheme, content = content)
+    val context = LocalContext.current
+    val colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val dynamic = dynamicDarkColorScheme(context)
+        dynamic.copy(
+            background = AmoledBlack,
+            surface = DarkSurface,
+            surfaceVariant = DarkSurfaceElevated,
+            outline = DarkSurfaceBorder,
+            outlineVariant = Color(0xFF1F1F1F),
+        )
+    } else {
+        AmoledColorScheme
+    }
+
+    MaterialTheme(colorScheme = colorScheme, content = content)
 }

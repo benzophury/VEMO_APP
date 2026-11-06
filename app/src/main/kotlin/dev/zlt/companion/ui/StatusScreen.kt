@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -105,7 +106,11 @@ fun StatusScreen(
             )
 
             // Demo mode banner
-            if (demoMode) {
+            AnimatedVisibility(
+                visible = demoMode,
+                enter = fadeIn(tween(300)) + expandIn(tween(300)),
+                exit = fadeOut(tween(200)) + shrinkOut(tween(200)),
+            ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF221100)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, NeonYellow.copy(alpha = 0.5f)),
@@ -130,18 +135,24 @@ fun StatusScreen(
                 }
             }
 
-            state.error?.let { message ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF330005)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.6f)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NeonRed,
-                        modifier = Modifier.padding(14.dp),
-                    )
+            AnimatedVisibility(
+                visible = state.error != null,
+                enter = fadeIn(tween(300)) + expandIn(tween(300)),
+                exit = fadeOut(tween(200)) + shrinkOut(tween(200)),
+            ) {
+                state.error?.let { message ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF330005)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.6f)),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = NeonRed,
+                            modifier = Modifier.padding(14.dp),
+                        )
+                    }
                 }
             }
 
@@ -260,13 +271,13 @@ private fun Header(
                 text = "$operator • $host",
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
-                color = NeonCyan,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onRefresh, enabled = !isRefreshing) {
                 if (isRefreshing) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = NeonCyan)
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                 } else {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TextSecondary)
                 }
