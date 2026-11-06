@@ -1,10 +1,14 @@
-name: CI
+name: CI & Release
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -12,11 +16,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -24,16 +32,53 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
       - name: Verify lint
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" lintDebug
+
       - name: Run unit tests
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" testDebugUnitTest
-      - name: Assemble Debug APK
-        run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" assembleDebug
-      - name: Upload APK artifact
+
+      - name: Assemble Release APK
+        run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" assembleRelease
+
+      - name: Prepare Release Artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/release/app-release.apk release-artifacts/VEMO_APP-release.apk
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: VEMO_APP-release-apk
+          path: release-artifacts/VEMO_APP-release.apk
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="v1.0.0"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+          fi
+          
+          # Delete existing draft/release tag if clashing, or create/update release
+          gh release view "$TAG_NAME" >/dev/null 2>&1 && \
+            gh release upload "$TAG_NAME" release-artifacts/VEMO_APP-release.apk --clobber || \
+            gh release create "$TAG_NAME" release-artifacts/VEMO_APP-release.apk \
+              --title "VEMO APP $TAG_NAME" \
+              --notes "### 🚀 VEMO APP $TAG_NAME
+
+          **Highlights:**
+          - 🌌 **Pure AMOLED (#000000)** high-contrast theme with Material You dynamic expressive accents.
+          - 📊 **Real-time Canvas Throughput Waveforms**: Live download/upload speed waveform graphs.
+          - 🍩 **Data Quota Donut Gauge**: 240° circular sweep donut gauge with threshold alerts and reset options.
+          - 📶 **Dual-band Wi-Fi & Device Manager**: Connected station list, 2.4GHz / 5GHz band switching, SSID & password config.
+          - 💬 **SMS & USSD Support**: Send/receive carrier SMS, check balances, run USSD queries.
+          - ⚙️ **LAN-only privacy**: No telemetry, no cloud servers, local HTTP communication.
+
+          **Download APK:**
+          Install \`VEMO_APP-release.apk\` below on Android 8.0+ (API 26+)."

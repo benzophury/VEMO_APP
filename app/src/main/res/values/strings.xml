@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ZTE Hotspot Manager</string>
+    <string name="app_name">VEMO APP</string>
 
     <!-- The hardware is referred to by model only, never by network operator. -->
     <string name="device_name">ZTE U30S+</string>

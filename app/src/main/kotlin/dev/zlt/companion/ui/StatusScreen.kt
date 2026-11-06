@@ -261,7 +261,7 @@ private fun Header(
     ) {
         Column {
             Text(
-                text = "ZTE U30S+",
+                text = "VEMO APP",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp,

@@ -1,7 +1,7 @@
-# ZTE Hotspot Companion
+# VEMO APP
 
 <p align="center">
-  <strong>Modern Pure-AMOLED Material 3 Manager for ZTE U30S+ & Vemo 4G MiFi Hotspots</strong>
+  <strong>Modern Pure-AMOLED Material 3 Manager for Vemo 4G & ZTE U30S+ MiFi Hotspots</strong>
 </p>
 
 <p align="center">
