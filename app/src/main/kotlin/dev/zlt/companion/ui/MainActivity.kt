@@ -53,22 +53,44 @@ import dev.zlt.companion.ui.theme.ZltTheme
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        const val EXTRA_TARGET_TAB = "extra_target_tab"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val permission = android.Manifest.permission.POST_NOTIFICATIONS
+            if (checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(permission), 1001)
+            }
+        }
+
         setContent {
             ZltTheme {
-                AppRoot()
+                AppRoot(initialTab = intent?.getStringExtra(EXTRA_TARGET_TAB))
             }
         }
     }
 }
 
 @Composable
-private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
+private fun AppRoot(
+    initialTab: String? = null,
+    viewModel: RouterViewModel = viewModel(),
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var settingsOpen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialTab) {
+        if (initialTab == "SMS") {
+            viewModel.selectTab(AppTab.SMS)
+        }
+    }
 
     val current = settings
     if (current == null) {
@@ -160,13 +182,6 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                     colors = navigationItemColors(),
                 )
                 NavigationBarItem(
-                    selected = state.selectedTab == AppTab.USSD,
-                    onClick = { viewModel.selectTab(AppTab.USSD) },
-                    icon = { Icon(Icons.Default.Dialpad, contentDescription = null) },
-                    label = { Text("USSD") },
-                    colors = navigationItemColors(),
-                )
-                NavigationBarItem(
                     selected = state.selectedTab == AppTab.TOOLS,
                     onClick = { viewModel.selectTab(AppTab.TOOLS) },
                     icon = { Icon(Icons.Default.Build, contentDescription = null) },
@@ -236,14 +251,6 @@ private fun AppRoot(viewModel: RouterViewModel = viewModel()) {
                             onRefresh = { viewModel.refreshSms() },
                             onSendSms = { num, msg -> viewModel.sendSms(num, msg) },
                             onDeleteSms = { id -> viewModel.deleteSms(id) },
-                        )
-                    }
-                    AppTab.USSD -> {
-                        UssdScreen(
-                            ussdResult = state.ussdResult,
-                            isLoading = state.isLoadingUssd,
-                            onSendUssd = { code, isReply -> viewModel.sendUssd(code, isReply) },
-                            onClear = { viewModel.clearUssd() },
                         )
                     }
                     AppTab.TOOLS -> {

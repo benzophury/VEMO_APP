@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Four ascending signal bars, drawn inside the 72dp adaptive-icon safe zone.
-     Deliberately generic: no operator marks, no device likeness, no wordmark. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Outer Wi-Fi wave arc in Neon Cyan with subtle glow -->
     <path
-        android:fillColor="#5B7A99"
-        android:pathData="M24,58 h12 a2,2 0 0 1 2,2 v10 a2,2 0 0 1 -2,2 h-12 a2,2 0 0 1 -2,-2 v-10 a2,2 0 0 1 2,-2 z" />
+        android:fillColor="#1500E5FF"
+        android:pathData="M54,20 C69.5,20 84.5,26.5 93.5,35.5 L87,42 C80,35 68,30 54,30 C40,30 28,35 21,42 L14.5,35.5 C23.5,26.5 38.5,20 54,20 Z" />
+
     <path
-        android:fillColor="#7FA8CC"
-        android:pathData="M41,49 h12 a2,2 0 0 1 2,2 v19 a2,2 0 0 1 -2,2 h-12 a2,2 0 0 1 -2,-2 v-19 a2,2 0 0 1 2,-2 z" />
+        android:fillColor="#00E5FF"
+        android:pathData="M54,26 C66.8,26 79,31.4 86.8,39.2 L81.2,44.8 C75.2,38.8 65,34.5 54,34.5 C43,34.5 32.8,38.8 26.8,44.8 L21.2,39.2 C29,31.4 41.2,26 54,26 Z" />
+
+    <!-- Inner Wi-Fi wave arc -->
     <path
-        android:fillColor="#A9D0E8"
-        android:pathData="M58,40 h12 a2,2 0 0 1 2,2 v28 a2,2 0 0 1 -2,2 h-12 a2,2 0 0 1 -2,-2 v-28 a2,2 0 0 1 2,-2 z" />
+        android:fillColor="#D500F9"
+        android:pathData="M54,39 C62.5,39 71,42.8 76.5,48.3 L70.9,53.9 C67.2,50.2 60.8,47.5 54,47.5 C47.2,47.5 40.8,50.2 37.1,53.9 L31.5,48.3 C37,42.8 45.5,39 54,39 Z" />
+
+    <!-- Bold, Sharp Futuristic "V" Symbol -->
     <path
-        android:fillColor="#4ADE9B"
-        android:pathData="M75,31 h12 a2,2 0 0 1 2,2 v37 a2,2 0 0 1 -2,2 h-12 a2,2 0 0 1 -2,-2 v-37 a2,2 0 0 1 2,-2 z" />
+        android:fillColor="#00E5FF"
+        android:pathData="M34,54 L54,88 L74,54 L66,54 L54,75 L42,54 Z" />
+
+    <!-- Center Radio Core Pulse -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M54,60 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 
 </vector>

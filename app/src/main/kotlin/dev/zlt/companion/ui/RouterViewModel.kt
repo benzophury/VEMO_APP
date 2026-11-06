@@ -17,6 +17,7 @@ import dev.zlt.companion.data.SettingsStore
 import dev.zlt.companion.data.SmsItem
 import dev.zlt.companion.data.SpeedSample
 import dev.zlt.companion.data.StatusCache
+import dev.zlt.companion.util.SmsNotificationHelper
 import dev.zlt.companion.data.UssdResult
 import dev.zlt.companion.data.WifiConfig
 import dev.zlt.companion.net.NetworkMode
@@ -34,7 +35,6 @@ enum class AppTab(val title: String) {
     DASHBOARD("Dashboard"),
     WIFI_DEVICES("Wi-Fi"),
     SMS("SMS"),
-    USSD("USSD"),
     TOOLS("Tools"),
 }
 
@@ -89,6 +89,7 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
     private var lastRxBytes = 0L
     private var lastTxBytes = 0L
     private var lastTimestamp = 0L
+    private var lastSmsUnreadCount = -1
 
     fun selectTab(tab: AppTab) {
         _state.update { it.copy(selectedTab = tab) }
@@ -102,7 +103,6 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
                 refreshStations()
             }
             AppTab.SMS -> refreshSms()
-            AppTab.USSD -> {}
             AppTab.TOOLS -> {
                 refreshTools()
                 refreshDeviceInfo()
@@ -160,6 +160,13 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
                         refreshing = false,
                     )
                 }
+
+                // Monitor incoming SMS and notify when new message count increases
+                val currentUnread = snapshot.status.smsUnreadCount
+                if (lastSmsUnreadCount in 0 until currentUnread) {
+                    checkAndNotifyNewSms()
+                }
+                lastSmsUnreadCount = currentUnread
 
                 // Refresh active tab secondary data
                 when (_state.value.selectedTab) {
@@ -349,9 +356,26 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val messages = repository.getSmsMessages()
                 _state.update { it.copy(smsList = messages, isLoadingSms = false) }
+                lastSmsUnreadCount = messages.count { it.isUnread }
             } catch (_: Exception) {
                 _state.update { it.copy(isLoadingSms = false) }
             }
+        }
+    }
+
+    private fun checkAndNotifyNewSms() {
+        viewModelScope.launch {
+            try {
+                val messages = repository.getSmsMessages()
+                val knownIds = _state.value.smsList.map { it.id }.toSet()
+                _state.update { it.copy(smsList = messages) }
+
+                val newUnread = messages.filter { it.isUnread && (knownIds.isEmpty() || it.id !in knownIds) }
+                val toNotify = if (newUnread.isNotEmpty()) newUnread else messages.filter { it.isUnread }
+                toNotify.firstOrNull()?.let { newest ->
+                    SmsNotificationHelper.showNewSmsNotification(getApplication(), newest)
+                }
+            } catch (_: Exception) {}
         }
     }
 
