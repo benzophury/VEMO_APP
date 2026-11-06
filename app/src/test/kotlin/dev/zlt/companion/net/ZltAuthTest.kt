@@ -20,6 +20,12 @@ class ZltAuthTest {
     }
 
     @Test
+    fun `zte u30s plain base64 password vector`() {
+        assertEquals("Z29kaXNldmlsNjY2", ZltAuth.encodePlainPassword("godisevil666"))
+        assertEquals("Z29kaXNldmlsNjY2", ZltAuth.encodePassword("", "godisevil666"))
+    }
+
+    @Test
     fun `username handles spaces empty and non ascii`() {
         assertEquals("dXNlciB3aXRoIHNwYWNlcw==", ZltAuth.encodeUsername("user with spaces"))
         assertEquals("", ZltAuth.encodeUsername(""))

@@ -44,6 +44,14 @@ data class RouterStatus(
     /** Why the authenticated readings are missing, when they are. */
     val note: String?,
     val networkType: String,
+    val networkProvider: String = "",
+    val wanIp: String = "",
+    val monthlyRxBytes: Long = 0L,
+    val monthlyTxBytes: Long = 0L,
+    val realtimeRxBytes: Long = 0L,
+    val realtimeTxBytes: Long = 0L,
+    val smsUnreadCount: Int = 0,
+    val wifiEnabled: Boolean = true,
     val reading: SignalReading?,
     val rsrpDbm: Int?,
     val rssiDbm: Int?,
@@ -57,6 +65,8 @@ data class RouterStatus(
 ) {
     /** True when the router says it is not attached to any network at all. */
     val hasService: Boolean get() = !networkType.trim().equals(NO_SERVICE, ignoreCase = true)
+
+    val monthlyTotalBytes: Long get() = monthlyRxBytes + monthlyTxBytes
 
     companion object {
         /**
@@ -75,10 +85,14 @@ data class RouterStatus(
                 authed = authed,
                 note = note,
                 networkType = networkType,
-                // With no service there is nothing for a signal reading to
-                // describe, whatever RSSI the device is still echoing. Showing
-                // "Weak" there would claim a poor connection where there is
-                // none. The raw figures stay visible under Details.
+                networkProvider = data["network_provider"].orEmpty(),
+                wanIp = data["wan_ipaddr"].orEmpty(),
+                monthlyRxBytes = data["monthly_rx_bytes"]?.toLongOrNull() ?: 0L,
+                monthlyTxBytes = data["monthly_tx_bytes"]?.toLongOrNull() ?: 0L,
+                realtimeRxBytes = data["realtime_rx_bytes"]?.toLongOrNull() ?: 0L,
+                realtimeTxBytes = data["realtime_tx_bytes"]?.toLongOrNull() ?: 0L,
+                smsUnreadCount = data["sms_unread_num"]?.toIntOrNull() ?: 0,
+                wifiEnabled = data["wifi_cur_state"] != "0",
                 reading = if (hasService) SignalReading.resolve(rsrp, rssi) else null,
                 rsrpDbm = rsrp,
                 rssiDbm = rssi,
@@ -89,6 +103,14 @@ data class RouterStatus(
                 pci = data["lte_pci"].orEmpty(),
                 connection = ConnectionState.from(data["ppp_status"].orEmpty()),
             )
+        }
+
+        fun formatBytes(bytes: Long): String {
+            if (bytes <= 0) return "0 B"
+            val units = arrayOf("B", "KB", "MB", "GB", "TB")
+            val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+            val value = bytes / Math.pow(1024.0, digitGroups.toDouble())
+            return String.format(java.util.Locale.US, "%.1f %s", value, units[digitGroups])
         }
 
         /**

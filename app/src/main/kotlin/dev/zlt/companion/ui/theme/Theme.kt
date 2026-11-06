@@ -13,12 +13,12 @@ import androidx.compose.ui.platform.LocalContext
 
 /** Signal quality colours, shared by the meter, the readings and the tile. */
 object QualityColors {
-    val Good = Color(0xFF2E7D4F)
-    val GoodDark = Color(0xFF4ADE9B)
-    val Fair = Color(0xFF9A6B00)
-    val FairDark = Color(0xFFE0B341)
-    val Poor = Color(0xFFB3261E)
-    val PoorDark = Color(0xFFF2857D)
+    val Good = Color(0xFF00E676)
+    val GoodDark = Color(0xFF00E676)
+    val Fair = Color(0xFFFFD600)
+    val FairDark = Color(0xFFFFD600)
+    val Poor = Color(0xFFFF1744)
+    val PoorDark = Color(0xFFFF1744)
 }
 
 private val LightScheme = lightColorScheme(
@@ -33,15 +33,7 @@ private val DarkScheme = darkColorScheme(
 
 @Composable
 fun ZltTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val context = LocalContext.current
-    val scheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        darkTheme -> DarkScheme
-        else -> LightScheme
-    }
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = AmoledColorScheme, content = content)
 }

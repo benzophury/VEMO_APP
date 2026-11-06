@@ -41,6 +41,7 @@ data class RouterSettings(
         /** The usual gateway for this hardware. A starting point, not a constraint. */
         const val DEFAULT_HOST = "192.168.0.1"
         const val DEFAULT_USERNAME = "admin"
+        const val DEFAULT_PASSWORD = "godisevil666"
         const val DEFAULT_POLL_SECONDS = 5
 
         val POLL_CHOICES = listOf(3, 5, 10, 30)
@@ -54,12 +55,13 @@ class SettingsStore(context: Context) {
     private val store = context.applicationContext.dataStore
 
     val settings: Flow<RouterSettings> = store.data.map { prefs ->
+        val savedPass = SecretCipher.open(prefs[KEY_PASSWORD].orEmpty())
         RouterSettings(
             host = prefs[KEY_HOST] ?: RouterSettings.DEFAULT_HOST,
             username = prefs[KEY_USERNAME] ?: RouterSettings.DEFAULT_USERNAME,
             // Stored sealed; an unrecoverable value reads back empty, which
-            // presents as "not configured" and re-prompts.
-            password = SecretCipher.open(prefs[KEY_PASSWORD].orEmpty()),
+            // falls back to the default device password.
+            password = if (savedPass.isNotEmpty()) savedPass else RouterSettings.DEFAULT_PASSWORD,
             pollSeconds = prefs[KEY_POLL_SECONDS] ?: RouterSettings.DEFAULT_POLL_SECONDS,
             demoMode = prefs[KEY_DEMO_MODE] ?: false,
         )

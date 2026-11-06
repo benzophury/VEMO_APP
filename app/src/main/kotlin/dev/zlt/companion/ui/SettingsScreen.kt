@@ -66,7 +66,10 @@ fun SettingsScreen(
         null
     }
 
-    Surface(modifier = modifier.fillMaxSize()) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = androidx.compose.ui.graphics.Color.Black,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

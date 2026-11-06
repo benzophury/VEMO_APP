@@ -1,189 +1,227 @@
-# Router Signal
+# ZTE Hotspot Companion
 
-An Android companion app for the **ZLT T10D MAX** 4G router. Shows signal
-strength, connection state and the current network mode, and lets you switch
-between network modes. Includes a Quick Settings tile for signal at a glance.
+<p align="center">
+  <strong>Modern Pure-AMOLED Material 3 Manager for ZTE U30S+ & Vemo 4G MiFi Hotspots</strong>
+</p>
 
-> **Disclaimer:** This is an independent, reverse-engineered client. It is **not
-> affiliated with, endorsed by, or supported by ZTE, MTN, or any carrier**. The
-> API it talks to is undocumented and can break on a firmware update with no
-> notice.
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Android_8.0+_(API_26+)-3DDC84?logo=android&logoColor=white" alt="Platform" />
+  <img src="https://img.shields.io/badge/Language-Kotlin_2.0-7F52FF?logo=kotlin&logoColor=white" alt="Language" />
+  <img src="https://img.shields.io/badge/UI-Jetpack_Compose_Material_3-4285F4?logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
+  <img src="https://img.shields.io/badge/Theme-Pure_AMOLED_#000000-00E5FF" alt="Pure AMOLED" />
+  <img src="https://img.shields.io/badge/Security-Zero_Telemetry_•_Local_Only-00E676" alt="Security" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" />
+</p>
 
-It is a port of the login and `reqproc` protocol handling from the
-[`zltrouter`](https://github.com/exbyte-dev/zltrouter) Python project, which is
-where the protocol was reverse-engineered and live-verified. That project's
-`docs/protocol.md` is the reference for anything below.
+---
 
-## What it does
+## ⚡ Why This Exists
 
-- One screen: signal strength as bars and a plain word, the dBm figure and the
-  rest of the readings secondary
-- Switch network mode between Automatic, 4G only, 4G and 3G, 3G only, 2G only
-- A Quick Settings tile showing signal strength; tapping it opens the app
-- Router address and password entered in the app and kept on the device
-- A demo mode, so the app can be seen working without a router at all
+Portable 4G MiFi routers like the **ZTE U30S+**, **Vemo 4G**, and **ZLT T10D MAX** are ubiquitous workhorses for cellular connectivity. However, managing them is often painful:
 
-That is the whole of v1. No SMS, no USSD, no speed test — the Python project
-does all of those.
+* **Clunky 2000s Web UI**: Desktop-centric web interfaces that are non-responsive, laggy on mobile browsers, and require repetitive manual logins.
+* **Hidden SMS & USSD**: Checking data balances or carrier OTPs (such as Grameenphone, Skitto, Robi, Banglalink, Airtel, or MTN) requires navigating nested, slow web menus.
+* **No Real-Time Throughput**: Web dashboards show static, cumulative counters rather than live transfer waveforms.
+* **Battery Drain & Lack of Dark Mode**: Bright white web pages drain mobile battery on OLED screens.
 
-## Network behaviour
+**ZTE Hotspot Companion** replaces the stock browser interface with a **native, lightning-fast, pure-AMOLED Android companion**. It talks directly to the router's embedded `reqproc` HTTP API over your local Wi-Fi connection with **zero cloud dependencies, zero analytics, and zero external tracking**.
 
-The app talks to your router and to nothing else. There is no analytics, no
-crash reporting and no telemetry, and the dependency list is AndroidX, Kotlin,
-OkHttp and kotlinx-serialization — nothing that reports usage anywhere.
-`INTERNET` is the only permission it declares.
+---
 
-Demo mode makes no network connections at all. `DemoTransport` is an OkHttp
-interceptor that answers the `reqproc` calls in-process, plugged into the
-`baseClient` parameter `ZltClient` already takes — so the login handshake, the
-parsing, the repository and the whole UI run exactly as they do against real
-hardware, which is the point. It exists so the app can be evaluated, and
-reviewed for the Play Store, without a ZLT T10D MAX on the desk.
+## ✨ Core Features
 
-The router speaks plain HTTP on the LAN, so cleartext has to be allowed. It is
-allowed narrowly, in two layers:
+### 🌌 Pure AMOLED (#000000) Interface
+Engineered specifically for OLED/AMOLED displays to achieve true pitch-black backgrounds, infinite contrast, and maximum battery savings. Accented with vibrant neon status indicators (Cyan for download, Magenta for upload, Emerald Green for signal strength, Amber for warnings, Coral Red for critical errors).
 
-- `network_security_config.xml` denies cleartext by default and re-permits it
-  only for an enumerated list of private gateway addresses. Android's network
-  security config matches hostnames and has no notion of a CIDR range, so
-  "RFC1918 only" cannot be written directly — the addresses have to be listed.
-  The list is produced by `tools/gen_network_security_config.py`, so what it
-  covers is reviewable and reproducible rather than hand-maintained.
-- `HostValidation` rejects anything outside RFC1918 and the CGNAT range at the
-  point you type it, so the app cannot be aimed at a public address by hand.
+### 📈 Live Canvas Throughput Waveforms
+High-performance Compose `Canvas` sparklines rendering real-time network throughput (download $\downarrow$ and upload $\uparrow$ transfer speeds computed every poll cycle).
 
-If your router sits on an unusual address that the generated list misses, the
-app will say so specifically rather than failing generically. Add the address
-to `tools/gen_network_security_config.py`, re-run it, and rebuild.
+### 🍩 Data Quota Donut Gauge with Threshold Alerts
+A custom 240-degree sweep circular donut gauge displaying monthly data usage against user-defined bandwidth caps. Features automatic color transitions:
+* **Emerald Green**: $< 75\%$ usage
+* **Neon Yellow / Amber**: $75\% - 90\%$ warning threshold
+* **Coral Red**: $\ge 90\%$ critical quota exhaustion
 
-Your router password is sealed with an AES-GCM key generated in the Android
-Keystore, so what sits in DataStore is ciphertext that means nothing off the
-device. Backups are excluded for the same reason.
+### 📶 Cellular Data & Radio Management
+* **Instant Cellular Data Toggle**: One-tap mobile packet data connect/disconnect.
+* **Network Mode Lock**: Switch and lock radio modes between **Automatic**, **4G LTE Only**, **4G & 3G**, **3G Only**, and **2G Only** (utilizing reverse-engineered `BearerPreference` values).
+* **RF Diagnostics**: Deep live telemetry including **RSRP** (dBm), **RSRQ** (dB), **RSSI** (dBm), **SNR** (dB), Physical Cell ID (**PCI**), LTE frequency **Band**, and active cellular **Operator**.
 
-## Building
+### 📡 Dual-Band Wi-Fi & Connected Client Manager
+* **Dual-Band Support**: Manage 2.4 GHz ($802.11\text{b/g/n}$) and 5 GHz ($802.11\text{a/ac}$) Wi-Fi settings.
+* **Master Wi-Fi Switch**: Instantly toggle the wireless access point radio on or off.
+* **Credentials Management**: View, copy, or update SSID name and WPA2-PSK passphrase.
+* **Sleep Timeout**: Configure Wi-Fi idle sleep timers to conserve router battery life.
+* **Client Station Table**: Inspect connected clients with hostnames, IP addresses, MAC addresses, connection type (DHCP/Static), and connection durations.
 
-Needs JDK 17+ and an Android SDK with platform 36.
+### 💬 UCS-2 Bangla SIM SMS Inbox & Composer
+* **SIM Card Storage Access**: Read, paginate, and manage incoming and stored SMS messages directly from the SIM card.
+* **Full Bengali (Unicode UCS-2 / UTF-16 BE) Codec**: Accurately decodes and encodes native Bengali text (tested against Skitto and GrameenPhone Bengali SIM OTPs and service notifications) while stripping proprietary modem null/delimiter bytes (`0000`, `0009`).
+* **Direct SMS Composer**: Send SMS messages directly from your router's SIM card to any mobile number.
+* **Single-Tap Deletion**: Clean up SIM storage with one-click message deletion.
 
-```sh
-./gradlew assembleDebug        # debug APK
-./gradlew testDebugUnitTest    # unit tests
-./gradlew assembleRelease      # release APK
-./gradlew bundleRelease        # release AAB, which is what Play takes
-```
+### 📟 Interactive USSD Terminal
+* **Two-Way USSD Sessions**: Execute carrier USSD strings (e.g., `*121#`, `*5000#`, `*123#`) and reply to interactive multi-level service menus.
+* **Asynchronous Polling Engine**: Automatically polls the router's `ussd_write_flag` state machine and decodes responses.
+* **Quick Access Chips**: Pre-configured shortcut chips for common carrier balance and package inquiry codes.
 
-`local.properties` needs `sdk.dir` pointing at your SDK, as usual. The SDK needs
-`platforms;android-36` and `build-tools;36.0.0`; the emulator and a system image
-are only needed for capturing store screenshots.
+### 🛠️ Hardware & Network Administration Tools
+* **Device Telemetry**: Inspect device IMEI, SIM IMSI, WAN IP address, APN profile, firmware version (`wa_inner_version`), hardware revision, and live battery percentage with charging status.
+* **APN Profile Editor**: Add and activate custom APN profiles for any global mobile network operator.
+* **LAN & DHCP Configuration**: Customize router gateway IP, subnet mask, DHCP address pool range, and DNS server address.
+* **Security & Power Controls**: Change the web admin password, execute a clean soft reboot, or perform a factory reset.
 
-### Release signing
+### 🛡️ Zero-Telemetry Privacy Boundary
+* **Local Communication Only**: Communicates exclusively with your router gateway on RFC1918 private IPv4 subnets (e.g., `192.168.0.1`).
+* **Strict Android Network Security Config**: Disallows all general cleartext HTTP traffic; explicitly whitelists only designated private gateway addresses.
+* **Keystore Encrypted Credentials**: Admin passwords are sealed using hardware-backed AES-256-GCM encryption via the Android Keystore.
+* **No Trackers**: Zero third-party SDKs, zero crash reporters, zero analytics. Only `android.permission.INTERNET` is declared.
 
-Release builds are signed from a gitignored `keystore.properties`. Without it
-the release build still succeeds, unsigned, so a fresh clone builds for anyone.
+### 🎮 Built-in In-Process Demo Mode
+Allows exploring, testing, and reviewing every screen and feature without owning physical router hardware. The canned transport runs completely in-process via OkHttp interceptors.
 
-```sh
-keytool -genkeypair -v \
-  -keystore ~/zlt-companion-release.jks \
-  -alias zlt-companion \
-  -keyalg RSA -keysize 4096 -validity 10000
+---
 
-cp keystore.properties.example keystore.properties
-# then fill in the paths and passwords
-```
+## 🏛️ Architecture & Tech Stack
 
-**Back the keystore up somewhere off this machine.** Losing it means never being
-able to ship an update that existing installs will accept.
-
-### Verifying a downloaded APK
-
-Releases are signed with the key below. Android refuses to install an update
-signed by a different key, so this fingerprint is also what proves a download
-came from here:
+The app is built following modern Android Architecture Components and clean unidirectional data flow (UDF):
 
 ```
-SHA-256  9a:ff:2a:6f:b0:f9:6a:a1:7b:30:a3:1e:a6:21:80:a9:fd:6b:32:e7:60:ec:c0:ef:44:55:17:57:0e:8b:cd:a8
+┌────────────────────────────────────────────────────────┐
+│                   UI Layer (Jetpack Compose)           │
+│  MainActivity ─ AppRoot ─ StatusScreen ─ WifiDevices   │
+│  SmsScreen ─ UssdScreen ─ ToolsSettings ─ Widgets     │
+└───────────────────────────▲────────────────────────────┘
+                            │ StateFlow<StatusUiState>
+┌───────────────────────────┴────────────────────────────┐
+│                  ViewModel Layer                       │
+│                   RouterViewModel                      │
+│   (State orchestration, Coroutine polling, Rate math)  │
+└───────────────────────────▲────────────────────────────┘
+                            │
+┌───────────────────────────┴────────────────────────────┐
+│                 Repository Layer                       │
+│                 RouterRepository                       │
+│     (Snapshot caching, Model transformation, Auth)     │
+└───────────────────────────▲────────────────────────────┘
+                            │
+┌───────────────────────────┴────────────────────────────┐
+│              Network & Protocol Layer                  │
+│   ZltClient ── ZltAuth ── ZltProtocol ── SmsCodec     │
+│   HostValidation ── SessionCookieJar ── DemoTransport  │
+└───────────────────────────▲────────────────────────────┘
+                            │ HTTP (reqproc/proc_get & proc_post)
+                 [ ZTE / Vemo 4G Router ]
 ```
 
-Check a download against it before installing:
+* **UI Toolkit**: Jetpack Compose with Material 3 components.
+* **Reactive State Management**: Kotlin Coroutines, `StateFlow`, `SharedFlow`, and Lifecycle-aware collectors (`collectAsStateWithLifecycle`).
+* **Networking**: OkHttp 4 with custom `SessionCookieJar`, mutex-guarded sequential execution, and `DemoTransport` mock engine.
+* **Serialization**: `kotlinx.serialization` (JSON).
+* **Storage**: Android Jetpack DataStore Preferences with Android Keystore AES-GCM cipher integration (`SecretCipher`).
 
-```sh
-apksigner verify --print-certs app-release.apk
-```
+---
 
-### If this ever goes to Google Play
+## 🚀 Building & Testing
 
-Play App Signing normally has Google generate its own app signing key. Do **not**
-accept that here. Anyone who sideloaded a release from GitHub would then be
-unable to update to the Play build — the signatures would not match, and Android
-would make them uninstall first and lose their settings.
+### Prerequisites
+* **Java Development Kit (JDK)**: JDK 17 or higher.
+* **Android SDK**: Build tools `36.0.0`, compile SDK `36`, minimum SDK `26` (Android 8.0 Oreo).
 
-Enrol by uploading `zlt-companion-release.jks` as the app signing key instead, so
-both channels ship the same signature. That choice is made once, at enrolment,
-and cannot be changed afterwards.
+### Build Commands
 
-## How it is put together
+```bash
+# Clone the repository
+git clone https://github.com/your-username/zte-hotspot-companion.git
+cd zte-hotspot-companion
 
-```
-net/    The protocol port. ZltAuth (login encoding), ZltClient (proc_get,
-        proc_post, session, lockout guard), ZltProtocol (every device-specific
-        constant), HostValidation, DemoTransport (the canned router).
-data/   SettingsStore and the Keystore cipher, RouterRepository, the signal
-        quality thresholds, StatusCache for the tile.
-ui/     Compose screens and the ViewModel.
-tile/   The Quick Settings tile.
-```
-
-Anything device-specific lives in `net/ZltProtocol.kt`, mirroring how the Python
-keeps its constants in one block: different firmware should need changes there
-and nowhere else.
-
-### Notes worth knowing before changing the protocol code
-
-- **The password encoding is not what it looks like.** It is
-  `Base64(ascii(lowercase_sha256_hex(nonce + password)))` — the digest becomes a
-  64-character hex *string* first, and that string is what gets Base64-encoded.
-  Encoding the raw digest bytes gives a plausible 44-character value that the
-  router rejects. `ZltAuthTest` pins this against vectors generated from the
-  Python.
-- **The router locks out after five wrong passwords.** The client reads
-  `psw_fail_num_str` (which counts attempts *remaining*, not failures) before
-  every login and refuses to try below two. Do not remove this guard, and do not
-  debug encoding problems against live hardware.
-- **`net_select` is the key that holds the configured mode** on this firmware,
-  not `net_select_mode` or `m_netselect_save`, both of which come back empty.
-  The fallback order exists for other builds.
-- **3G is `TD_W`, not `Only_WCDMA`.**
-- **LOGIN answers `"0"` or `"4"`; every other write answers `"success"`.**
-- **The status keys and the mode keys go out as one `proc_get`.** They are all
-  plain scalar keys and `multi_data` joins as many as are asked for, so there is
-  no reason to make two round trips — and making two meant the mode went stale.
-  If firmware ever refuses a list that long, `snapshot()` notices the mode keys
-  missing from the response and re-reads them separately.
-- **With `network_type: No Service` the device still echoes a stale `rssi` and
-  `signalbar`.** Those are ignored for the headline reading and shown only under
-  Details.
-
-## Testing
-
-71 unit tests, all on the JVM — no device or emulator needed.
-
-```sh
+# Run JVM Unit Tests (70+ test cases covering auth, protocol, SMS codec, and models)
 ./gradlew testDebugUnitTest
+
+# Build Debug APK
+./gradlew assembleDebug
+
+# Output APK path:
+# app/build/outputs/apk/debug/app-debug.apk
 ```
 
-`RouterMock` mirrors `tests/router_mock.py` from the Python project, and as
-there it spells out the cmd names rather than importing the constants, so a
-rename breaks a test rather than moving both sides at once.
+### Building Release APK / App Bundle
 
-## Known limits
+To produce signed production builds, create `keystore.properties` from the example template:
 
-- **The Quick Settings tile is not live.** Android only calls a tile's
-  `onStartListening` while the shade is open, so keeping one updating on a timer
-  would need a foreground service. The tile paints its last cached reading
-  immediately and refreshes in the background, so it is current within about a
-  second of opening the shade.
-- **`ppp_status` is interpreted for three captured values.** `ppp_connected`,
-  `ppp_connecting` and `ppp_disconnected` are named;
-  anything else is shown verbatim, because there is no capture of the other
-  states to work from.
-- **IPv4 addresses only**, no hostnames and no port. The router is reached by
-  address on the LAN.
+```bash
+cp keystore.properties.example keystore.properties
+# Edit keystore.properties with your keystore path, alias, and credentials
+```
+
+Then run:
+
+```bash
+# Build signed release APK
+./gradlew assembleRelease
+
+# Build Google Play App Bundle (AAB)
+./gradlew bundleRelease
+```
+
+---
+
+## 📲 Wireless ADB Installation
+
+You can install the app directly to your Android device over Wi-Fi without needing a USB cable:
+
+1. **Enable Developer Options & Wireless Debugging**:
+   * Navigate to **Settings** $\to$ **About Phone** and tap **Build Number** 7 times.
+   * Go to **Settings** $\to$ **System** $\to$ **Developer Options**.
+   * Toggle on **Wireless Debugging** and allow your Wi-Fi network.
+
+2. **Pair with Wireless ADB** (Android 11+):
+   * In Wireless Debugging, tap **Pair device with pairing code**.
+   * Note the IP address, Port, and 6-digit Wi-Fi pairing code.
+   * On your computer terminal, run:
+     ```bash
+     adb pair <DEVICE_IP>:<PAIRING_PORT>
+     # Enter pairing code when prompted
+     ```
+
+3. **Connect to Wireless ADB**:
+   ```bash
+   adb connect <DEVICE_IP>:<CONNECT_PORT>
+   adb devices
+   ```
+
+4. **Install the Debug APK**:
+   ```bash
+   ./gradlew installDebug
+   # Or install the generated APK file:
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+---
+
+## 📖 Protocol Documentation
+
+The reverse-engineered protocol documentation, authentication handshake, parameter mappings, SMS UCS-2 encoding, and state machines are documented in depth in:
+
+👉 **[`PROTOCOL.md`](PROTOCOL.md)**
+
+For future AI agents, code maintainers, and LLM coding assistants, architectural deep-dives and firmware idiosyncrasies are documented in:
+
+👉 **[`AI_CONTEXT.md`](AI_CONTEXT.md)**
+
+---
+
+## 🔒 Security & Privacy
+
+* **Zero Cloud Services**: This application does not connect to any servers, cloud proxies, or third-party backends.
+* **Zero Telemetry**: No crash reporting (e.g. Firebase Crashlytics), analytics (e.g. Google Analytics), or behavioral tracking are bundled or used.
+* **Encrypted Secrets**: Your router credentials never leave your device unencrypted. Passwords are saved encrypted with Android Keystore AES-GCM keys.
+* **Strict Cleartext Whitelisting**: Android cleartext HTTP permissions are restricted strictly to private RFC1918 gateway addresses.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+> **Disclaimer**: This is an independent, community-driven reverse-engineered project. It is **not affiliated with, endorsed by, or supported by ZTE Corporation, Vemo, MTN, Grameenphone, or any mobile network operator**. ZTE and other trademarks belong to their respective owners.

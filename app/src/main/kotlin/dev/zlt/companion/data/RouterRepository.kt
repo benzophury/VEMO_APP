@@ -128,7 +128,7 @@ class RouterRepository(
             ZltProtocol.GOFORM_SET_BEARER,
             mapOf("BearerPreference" to mode.value),
         )
-        if (result["result"] != ZltProtocol.RESULT_SUCCESS) {
+        if (result["result"] != ZltProtocol.RESULT_SUCCESS && result["result"] != "0") {
             throw RouterRejected(
                 "The router would not change the network mode " +
                     "(it answered \"${result["result"].orEmpty()}\").",
@@ -136,6 +136,68 @@ class RouterRepository(
         }
         return NetModeState.from(client.get(*ZltProtocol.NET_KEYS.toTypedArray()))
     }
+
+    suspend fun reboot() {
+        val client = client()
+        client.post(ZltProtocol.GOFORM_REBOOT, emptyMap())
+    }
+
+    suspend fun getStations(): List<ConnectedStation> = client().getStations()
+
+    suspend fun getSmsMessages(): List<SmsItem> = client().getSmsMessages()
+
+    suspend fun sendSms(number: String, message: String): Boolean = client().sendSms(number, message)
+
+    suspend fun deleteSms(id: String): Boolean = client().deleteSms(id)
+
+    suspend fun getWifiConfig(): WifiConfig = client().getWifiConfig()
+
+    suspend fun setWifiEnabled(enabled: Boolean): Boolean = client().setWifiEnabled(enabled)
+
+    suspend fun setWifiBand(band: String): Boolean = client().setWifiBand(band)
+
+    suspend fun setWifiSsidPassword(ssid: String, password: String, authMode: String = "WPA2PSK"): Boolean =
+        client().setWifiSsidPassword(ssid, password, authMode)
+
+    suspend fun getDataQuotaConfig(): DataQuotaConfig = client().getDataQuotaConfig()
+
+    suspend fun setDataQuotaConfig(
+        enabled: Boolean,
+        limitValue: String,
+        unitMultiplier: String = "1024",
+        alertPercent: Int = 90,
+    ): Boolean = client().setDataQuotaConfig(enabled, limitValue, unitMultiplier, alertPercent)
+
+    suspend fun resetTrafficCalibration(): Boolean = client().resetTrafficCalibration()
+
+    suspend fun setMobileDataConnected(connect: Boolean): Boolean = client().setMobileDataConnected(connect)
+
+    suspend fun getDeviceInfo(): DeviceInfo = client().getDeviceInfo()
+
+    suspend fun sendUssd(code: String, isReply: Boolean = false): UssdResult =
+        client().sendUssd(code, isReply)
+
+    suspend fun getNetworkSettings(): NetworkSettings = client().getNetworkSettings()
+
+    suspend fun setNetworkSettings(dialMode: String, isRoamingAllowed: Boolean): Boolean =
+        client().setNetworkSettings(dialMode, isRoamingAllowed)
+
+    suspend fun getLanSettings(): LanSettings = client().getLanSettings()
+
+    suspend fun setLanSettings(settings: LanSettings): Boolean =
+        client().setLanSettings(settings)
+
+    suspend fun setWifiSleepTime(minutes: String): Boolean =
+        client().setWifiSleepTime(minutes)
+
+    suspend fun changeAdminPassword(oldPass: String, newPass: String): Boolean =
+        client().changeAdminPassword(oldPass, newPass)
+
+    suspend fun factoryReset(): Boolean =
+        client().factoryReset()
+
+    suspend fun saveApnProfile(name: String, apn: String, authMode: String): Boolean =
+        client().saveApnProfile(name, apn, authMode)
 
     companion object {
         /**

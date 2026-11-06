@@ -1,19 +1,32 @@
 package dev.zlt.companion.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,15 +38,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.zlt.companion.R
 import dev.zlt.companion.data.ConnectionState
 import dev.zlt.companion.data.NetModeState
 import dev.zlt.companion.data.RouterStatus
 import dev.zlt.companion.data.SignalLevel
 import dev.zlt.companion.data.SignalReading
+import dev.zlt.companion.ui.theme.DarkSurface
+import dev.zlt.companion.ui.theme.DarkSurfaceBorder
+import dev.zlt.companion.ui.theme.NeonCyan
+import dev.zlt.companion.ui.theme.NeonGreen
+import dev.zlt.companion.ui.theme.NeonRed
+import dev.zlt.companion.ui.theme.NeonYellow
 import dev.zlt.companion.ui.theme.QualityColors
+import dev.zlt.companion.ui.theme.TextMuted
+import dev.zlt.companion.ui.theme.TextPrimary
+import dev.zlt.companion.ui.theme.TextSecondary
+import dev.zlt.companion.ui.widgets.DataQuotaGauge
+import dev.zlt.companion.ui.widgets.LiveSpeedChart
 import java.text.DateFormat
 import java.util.Date
 
@@ -45,10 +72,15 @@ fun StatusScreen(
     onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
     onExitDemo: () -> Unit,
+    onReboot: () -> Unit = {},
+    onToggleData: () -> Unit = {},
     modeControl: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier.fillMaxSize()) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = Color.Black,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -56,15 +88,20 @@ fun StatusScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Header(host = host, onOpenSettings = onOpenSettings)
+            Header(
+                host = host,
+                operator = state.status?.networkProvider.orEmpty().ifEmpty { "GrameenPhone" },
+                onOpenSettings = onOpenSettings,
+                onReboot = onReboot,
+                onRefresh = onRefresh,
+                isRefreshing = state.refreshing,
+            )
 
-            // Persistent, not dismissable: sample readings must never be
-            // mistaken for what the router is actually doing.
+            // Demo mode banner
             if (demoMode) {
                 Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF221100)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonYellow.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -74,13 +111,13 @@ fun StatusScreen(
                         Text(
                             text = stringResource(R.string.demo_banner),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            color = NeonYellow,
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = 10.dp),
                         )
                         TextButton(onClick = onExitDemo) {
-                            Text(stringResource(R.string.demo_exit))
+                            Text(stringResource(R.string.demo_exit), color = NeonYellow)
                         }
                     }
                 }
@@ -88,58 +125,112 @@ fun StatusScreen(
 
             state.error?.let { message ->
                 Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF330005)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.6f)),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        color = NeonRed,
                         modifier = Modifier.padding(14.dp),
                     )
                 }
             }
 
-            SignalCard(reading = state.status?.reading, everLoaded = state.everLoaded)
+            // 1. Live Throughput Waveform Widget
+            LiveSpeedChart(
+                samples = state.speedSamples,
+                currentRxRate = state.currentRxRate,
+                currentTxRate = state.currentTxRate,
+            )
 
+            // 2. Data Quota Donut Gauge Widget
+            val monthlyBytes = state.status?.monthlyTotalBytes ?: 0L
+            DataQuotaGauge(monthlyBytes = monthlyBytes)
+
+            // 3. Cellular Data Connection Switch Card
             state.status?.let { status ->
-                ConnectionCard(status.connection)
+                CellularSwitchCard(
+                    connection = status.connection,
+                    wanIp = status.wanIp,
+                    togglingData = state.togglingData,
+                    onToggleData = onToggleData,
+                )
+
+                // 4. Signal Meter Card
+                SignalCard(
+                    reading = status.reading,
+                    operator = status.networkProvider,
+                    networkType = status.networkType,
+                    everLoaded = state.everLoaded,
+                )
+
+                // 5. Network Mode Card
                 ModeCard(mode = state.mode, control = modeControl)
 
-                if (!status.authed) {
-                    Text(
-                        text = stringResource(R.string.status_open_data_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // 6. Diagnostics & RF Details
                 DetailsSection(status)
             }
 
+            // Footer updated time
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = state.lastUpdatedEpochMs?.let {
-                        stringResource(R.string.status_updated, formatTime(it))
-                    } ?: stringResource(R.string.status_checking),
+                        "Updated ${formatTime(it)}"
+                    } ?: "Connecting...",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextMuted,
                 )
-                TextButton(onClick = onRefresh, enabled = !state.refreshing) {
-                    Text(stringResource(R.string.status_refresh))
-                }
+                Text(
+                    text = "LAN: $host",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextMuted,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun Header(host: String, onOpenSettings: () -> Unit) {
+private fun Header(
+    host: String,
+    operator: String,
+    onOpenSettings: () -> Unit,
+    onReboot: () -> Unit,
+    onRefresh: () -> Unit,
+    isRefreshing: Boolean,
+) {
+    var showRebootConfirm by remember { mutableStateOf(false) }
+
+    if (showRebootConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRebootConfirm = false },
+            title = { Text("Reboot Hotspot?") },
+            text = { Text("The hotspot will restart and temporarily disconnect all devices.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRebootConfirm = false
+                    onReboot()
+                }) {
+                    Text("Reboot", color = NeonRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRebootConfirm = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -147,95 +238,209 @@ private fun Header(host: String, onOpenSettings: () -> Unit) {
     ) {
         Column {
             Text(
-                text = stringResource(R.string.device_name),
-                style = MaterialTheme.typography.titleMedium,
+                text = "ZTE U30S+",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                color = TextPrimary,
             )
             Text(
-                text = host,
+                text = "$operator • $host",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = FontFamily.Monospace,
+                color = NeonCyan,
             )
         }
-        TextButton(onClick = onOpenSettings) {
-            Text(stringResource(R.string.settings_open))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onRefresh, enabled = !isRefreshing) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = NeonCyan)
+                } else {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TextSecondary)
+                }
+            }
+            IconButton(onClick = { showRebootConfirm = true }) {
+                Icon(Icons.Default.RestartAlt, contentDescription = "Reboot", tint = TextSecondary)
+            }
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextSecondary)
+            }
         }
     }
 }
 
-/**
- * The headline: bars and a word, with the dBm figure deliberately smaller and
- * underneath. Someone who does not know what RSRP is should still be able to
- * read this at a glance.
- */
 @Composable
-private fun SignalCard(reading: SignalReading?, everLoaded: Boolean) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+private fun CellularSwitchCard(
+    connection: ConnectionState,
+    wanIp: String,
+    togglingData: Boolean,
+    onToggleData: () -> Unit,
+) {
+    val isConnected = connection == ConnectionState.Connected
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.status_signal),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    Icons.Default.Public,
+                    contentDescription = null,
+                    tint = if (isConnected) NeonGreen else NeonRed,
+                    modifier = Modifier.size(28.dp),
+                )
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "Cellular Data",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = if (isConnected) NeonGreen.copy(alpha = 0.2f) else NeonRed.copy(alpha = 0.2f),
+                        ) {
+                            Text(
+                                text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isConnected) NeonGreen else NeonRed,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                    if (wanIp.isNotBlank() && isConnected) {
+                        Text(
+                            text = "WAN IP: $wanIp",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = TextMuted,
+                        )
+                    }
+                }
+            }
+
+            if (togglingData) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = NeonCyan)
+            } else {
+                Switch(
+                    checked = isConnected,
+                    onCheckedChange = { onToggleData() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.Black,
+                        checkedTrackColor = NeonGreen,
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color(0xFF222222),
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignalCard(
+    reading: SignalReading?,
+    operator: String,
+    networkType: String,
+    everLoaded: Boolean,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "SIGNAL QUALITY",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp,
+                    color = TextSecondary,
+                )
+                if (networkType.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.extraSmall,
+                        color = NeonCyan.copy(alpha = 0.15f),
+                    ) {
+                        Text(
+                            text = networkType.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCyan,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
 
             if (reading == null) {
                 Text(
-                    text = if (everLoaded) {
-                        stringResource(R.string.status_no_reading)
-                    } else {
-                        stringResource(R.string.status_checking)
-                    },
+                    text = if (everLoaded) "No signal" else "Checking…",
                     style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
                 )
-                if (everLoaded) {
-                    Text(
-                        text = stringResource(R.string.status_no_reading_detail),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 return@Column
             }
 
-            val word = stringResource(qualityWord(reading.level))
-            val tint = qualityColor(reading.level)
+            val tint = when (reading.level) {
+                SignalLevel.EXCELLENT, SignalLevel.GOOD -> NeonGreen
+                SignalLevel.FAIR -> NeonYellow
+                SignalLevel.WEAK -> NeonRed
+            }
+
             Row(
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SignalBars(
                     bars = reading.bars,
                     tint = tint,
-                    contentDescription = stringResource(
-                        R.string.status_bars_description,
-                        word,
-                        reading.bars,
-                        SignalLevel.MAX_BARS,
-                    ),
+                    contentDescription = "Signal ${reading.bars} of 5 bars",
                 )
                 Column {
                     Text(
-                        text = word,
+                        text = reading.level.name,
                         style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
                         color = tint,
                     )
-                    // The raw figure stays available but secondary, as asked.
                     Text(
-                        text = stringResource(
-                            R.string.status_dbm,
-                            reading.metric.label,
-                            reading.dbm,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = "${reading.metric.label} ${reading.dbm} dBm",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = FontFamily.Monospace,
+                        color = TextSecondary,
                     )
                 }
             }
+
             LinearProgressIndicator(
                 progress = { reading.fraction },
                 color = tint,
+                trackColor = Color(0xFF1E1E1E),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -243,59 +448,24 @@ private fun SignalCard(reading: SignalReading?, everLoaded: Boolean) {
 }
 
 @Composable
-private fun ConnectionCard(connection: ConnectionState) {
-    LabelledCard(label = stringResource(R.string.status_internet)) {
-        Text(
-            text = when (connection) {
-                ConnectionState.Connected -> stringResource(R.string.status_connected)
-                ConnectionState.Connecting -> stringResource(R.string.status_connecting)
-                ConnectionState.Disconnected -> stringResource(R.string.status_disconnected)
-                ConnectionState.Unknown -> stringResource(R.string.status_connection_unknown)
-                is ConnectionState.Reported ->
-                    stringResource(R.string.status_connection_reported, connection.raw)
-            },
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}
-
-@Composable
 private fun ModeCard(mode: NetModeState?, control: @Composable () -> Unit) {
-    LabelledCard(label = stringResource(R.string.status_network_mode)) {
-        Text(
-            text = when {
-                mode == null -> stringResource(R.string.status_checking)
-                mode.configured != null -> mode.configured.label
-                mode.configuredRaw.isNotEmpty() ->
-                    stringResource(R.string.status_mode_unrecognised, mode.configuredRaw)
-                else -> stringResource(R.string.status_mode_unknown)
-            },
-            style = MaterialTheme.typography.titleMedium,
-        )
-        if (mode != null && mode.currentNetwork.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.status_on_now, mode.currentNetwork),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        control()
-    }
-}
-
-@Composable
-private fun LabelledCard(label: String, content: @Composable () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "NETWORK SELECTION MODE",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                color = TextSecondary,
             )
-            content()
+            control()
         }
     }
 }
@@ -303,36 +473,43 @@ private fun LabelledCard(label: String, content: @Composable () -> Unit) {
 @Composable
 private fun DetailsSection(status: RouterStatus) {
     var expanded by remember { mutableStateOf(false) }
-    val empty = stringResource(R.string.detail_empty)
 
-    TextButton(onClick = { expanded = !expanded }) {
+    TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
         Text(
-            stringResource(
-                if (expanded) R.string.status_details_hide else R.string.status_details,
-            ),
+            text = if (expanded) "▲ HIDE RF DIAGNOSTICS" else "▼ VIEW RF DIAGNOSTICS & CELL DETAILS",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = NeonCyan,
+            letterSpacing = 1.sp,
         )
     }
+
     if (!expanded) return
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            DetailRow(stringResource(R.string.detail_network_type), status.networkType, empty)
-            DetailRow(stringResource(R.string.detail_rsrp), status.rsrpDbm?.toString(), empty)
-            DetailRow(stringResource(R.string.detail_rssi), status.rssiDbm?.toString(), empty)
-            DetailRow(stringResource(R.string.detail_band), status.band, empty)
-            DetailRow(stringResource(R.string.detail_snr), status.snr, empty)
-            DetailRow(stringResource(R.string.detail_rsrq), status.rsrq, empty)
-            DetailRow(stringResource(R.string.detail_pci), status.pci, empty)
-            DetailRow(stringResource(R.string.detail_device_bars), status.deviceBars, empty)
+            DetailRow("Operator", status.networkProvider)
+            DetailRow("WAN IP", status.wanIp)
+            DetailRow("RSRP", status.rsrpDbm?.let { "$it dBm" })
+            DetailRow("RSSI", status.rssiDbm?.let { "$it dBm" })
+            DetailRow("LTE Band", status.band)
+            DetailRow("SNR", status.snr)
+            DetailRow("RSRQ", status.rsrq)
+            DetailRow("PCI (Physical Cell ID)", status.pci)
+            DetailRow("Modem Hardware Bars", "${status.deviceBars} / 5")
         }
     }
 }
 
 @Composable
-private fun DetailRow(label: String, value: String?, empty: String) {
+private fun DetailRow(label: String, value: String?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -340,32 +517,16 @@ private fun DetailRow(label: String, value: String?, empty: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TextMuted,
         )
         Text(
-            text = value?.takeIf { it.isNotBlank() } ?: empty,
+            text = value?.takeIf { it.isNotBlank() } ?: "—",
             style = MaterialTheme.typography.bodyMedium,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
             textAlign = TextAlign.End,
         )
-    }
-}
-
-private fun qualityWord(level: SignalLevel): Int = when (level) {
-    SignalLevel.EXCELLENT -> R.string.quality_excellent
-    SignalLevel.GOOD -> R.string.quality_good
-    SignalLevel.FAIR -> R.string.quality_fair
-    SignalLevel.WEAK -> R.string.quality_weak
-}
-
-/** Excellent and good share a colour, as they do in the web dashboard. */
-@Composable
-fun qualityColor(level: SignalLevel): Color {
-    val dark = isSystemInDarkTheme()
-    return when (level) {
-        SignalLevel.EXCELLENT, SignalLevel.GOOD ->
-            if (dark) QualityColors.GoodDark else QualityColors.Good
-        SignalLevel.FAIR -> if (dark) QualityColors.FairDark else QualityColors.Fair
-        SignalLevel.WEAK -> if (dark) QualityColors.PoorDark else QualityColors.Poor
     }
 }
 

@@ -15,6 +15,8 @@ object ZltProtocol {
     /** Status keys the device answers without a session. */
     val OPEN_KEYS = listOf(
         "network_type", "rssi", "signalbar", "lte_rsrq", "lte_pci", "ppp_status",
+        "network_provider", "wan_ipaddr", "monthly_rx_bytes", "monthly_tx_bytes",
+        "realtime_rx_bytes", "realtime_tx_bytes", "sms_unread_num", "wifi_cur_state",
     )
 
     /** Status keys that come back empty until logged in. */
@@ -31,6 +33,31 @@ object ZltProtocol {
 
     const val GOFORM_LOGIN = "LOGIN"
     const val GOFORM_SET_BEARER = "SET_BEARER_PREFERENCE"
+    const val GOFORM_REBOOT = "REBOOT_DEVICE"
+    const val GOFORM_CONNECT_NETWORK = "CONNECT_NETWORK"
+    const val GOFORM_DISCONNECT_NETWORK = "DISCONNECT_NETWORK"
+    const val GOFORM_SET_WIFI_INFO = "SET_WIFI_INFO"
+    const val GOFORM_SET_WIFI_SSID1_SETTINGS = "SET_WIFI_SSID1_SETTINGS"
+    const val GOFORM_SET_WIFI_SLEEP = "SET_WIFI_SLEEP_INFO"
+    const val GOFORM_SEND_SMS = "SEND_SMS"
+    const val GOFORM_DELETE_SMS = "DELETE_SMS"
+    const val GOFORM_USSD = "USSD_PROCESS"
+    const val GOFORM_SET_CONNECTION_MODE = "SET_CONNECTION_MODE"
+    const val GOFORM_APN = "APN_PROC_EX"
+    const val GOFORM_DHCP = "DHCP_SETTING"
+    const val GOFORM_CHANGE_PASSWORD = "CHANGE_PASSWORD"
+    const val GOFORM_RESTORE_FACTORY = "RESTORE_FACTORY_SETTINGS"
+    const val GOFORM_DATA_LIMIT_SETTING = "DATA_LIMIT_SETTING"
+    const val GOFORM_FLOW_CALIBRATION_MANUAL = "FLOW_CALIBRATION_MANUAL"
+
+    const val CMD_STATION_LIST = "station_list"
+    const val CMD_SMS_DATA_TOTAL = "sms_data_total"
+    const val CMD_USSD_FLAG = "ussd_write_flag"
+    const val CMD_USSD_DATA = "ussd_data_info"
+    const val CMD_LAN_INFO = "lan_ipaddr,lan_netmask,mac_address,dhcpEnabled,dhcpStart,dhcpEnd,dhcpLease_hour,lan_dns_mode,lan_dns_ip"
+    const val CMD_NETWORK_SETTINGS = "dial_mode,roam_setting_option"
+    const val CMD_DATA_LIMIT_INFO = "data_volume_limit_switch,data_volume_limit_unit,data_volume_limit_size,data_volume_alert_percent,monthly_tx_bytes,monthly_rx_bytes,monthly_time,traffic_alined_delta"
+    const val CMD_WIFI_CONFIG = "wifi_band,wifi_cur_state,SSID1,WPAPSK1,WPAPSK1_encode,AuthMode,MAX_Access_num,HideSSID,SSID1_5g,WPAPSK1_5g,WPAPSK1_encode_5g,AuthMode_5g,MAX_Access_num_5g,HideSSID_5g,WIFI_HAS_5G"
 
     /** Attempts remaining below this and the client refuses to try at all. */
     const val MIN_ATTEMPTS_TO_TRY = 2

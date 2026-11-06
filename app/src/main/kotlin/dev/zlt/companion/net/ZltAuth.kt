@@ -28,8 +28,13 @@ internal object ZltAuth {
     fun encodeUsername(username: String): String =
         Base64.getEncoder().encodeToString(username.toByteArray(Charsets.UTF_8))
 
+    /** `Base64(utf8(password))` for ZTE U30S+ and standard ZTE WebUI routers. */
+    fun encodePlainPassword(password: String): String =
+        Base64.getEncoder().encodeToString(password.toByteArray(Charsets.UTF_8))
+
     /** `Base64(ascii(lowercase_sha256_hex(randomLogin + password)))`. */
     fun encodePassword(randomLogin: String, password: String): String {
+        if (randomLogin.isEmpty()) return encodePlainPassword(password)
         val digest = MessageDigest.getInstance("SHA-256")
             .digest((randomLogin + password).toByteArray(Charsets.UTF_8))
         val hex = buildString(digest.size * 2) {

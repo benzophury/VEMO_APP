@@ -49,6 +49,12 @@ fun ModeControl(
                     onClick = { onSelect(candidate) },
                     enabled = changingMode == null,
                     label = { Text(candidate.label) },
+                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = dev.zlt.companion.ui.theme.NeonCyan.copy(alpha = 0.25f),
+                        selectedLabelColor = dev.zlt.companion.ui.theme.NeonCyan,
+                        containerColor = dev.zlt.companion.ui.theme.DarkSurfaceElevated,
+                        labelColor = dev.zlt.companion.ui.theme.TextSecondary,
+                    ),
                     leadingIcon = if (changingMode == candidate) {
                         {
                             CircularProgressIndicator(
