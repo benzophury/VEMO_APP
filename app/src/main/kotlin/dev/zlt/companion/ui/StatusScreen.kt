@@ -78,6 +78,8 @@ fun StatusScreen(
     state: StatusUiState,
     host: String,
     demoMode: Boolean,
+    carrierAppName: String = AppLauncher.DEFAULT_CARRIER_NAME,
+    carrierPackageName: String = AppLauncher.DEFAULT_CARRIER_PACKAGE,
     onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
     onExitDemo: () -> Unit,
@@ -102,6 +104,8 @@ fun StatusScreen(
             Header(
                 host = host,
                 operator = state.status?.networkProvider.orEmpty().ifEmpty { "GrameenPhone" },
+                carrierAppName = carrierAppName,
+                carrierPackageName = carrierPackageName,
                 onOpenSettings = onOpenSettings,
                 onReboot = onReboot,
                 onRefresh = onRefresh,
@@ -229,6 +233,8 @@ fun StatusScreen(
 private fun Header(
     host: String,
     operator: String,
+    carrierAppName: String,
+    carrierPackageName: String,
     onOpenSettings: () -> Unit,
     onReboot: () -> Unit,
     onRefresh: () -> Unit,
@@ -282,7 +288,7 @@ private fun Header(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Surface(
-                    onClick = { AppLauncher.launchCarrierApp(context) },
+                    onClick = { AppLauncher.launchCarrierApp(context, carrierPackageName) },
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
                     color = NeonYellow.copy(alpha = 0.15f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, NeonYellow.copy(alpha = 0.5f)),
@@ -294,12 +300,12 @@ private fun Header(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Launch,
-                            contentDescription = "Open Carrier App",
+                            contentDescription = "Open $carrierAppName",
                             tint = NeonYellow,
                             modifier = Modifier.size(12.dp),
                         )
                         Text(
-                            text = "Skitto",
+                            text = carrierAppName,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = NeonYellow,

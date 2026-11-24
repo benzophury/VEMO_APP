@@ -25,4 +25,21 @@ class RouterSettingsTest {
     fun `demo mode is off by default`() {
         assertFalse(RouterSettings().demoMode)
     }
+
+    @Test
+    fun `carrier app defaults to Skitto`() {
+        val settings = RouterSettings()
+        org.junit.Assert.assertEquals("Skitto", settings.carrierAppName)
+        org.junit.Assert.assertEquals("com.skitto", settings.carrierPackageName)
+    }
+
+    @Test
+    fun `custom carrier app is configurable`() {
+        val settings = RouterSettings(
+            carrierAppName = "MyGP",
+            carrierPackageName = "com.portonics.mygp",
+        )
+        org.junit.Assert.assertEquals("MyGP", settings.carrierAppName)
+        org.junit.Assert.assertEquals("com.portonics.mygp", settings.carrierPackageName)
+    }
 }

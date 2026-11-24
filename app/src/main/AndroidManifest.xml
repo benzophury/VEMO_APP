@@ -7,7 +7,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
+        <!-- Common Bangladesh carrier apps presets -->
         <package android:name="com.skitto" />
+        <package android:name="com.portonics.mygp" />
+        <package android:name="net.banglalink.mybl" />
+        <package android:name="net.omobio.robisc" />
+        <package android:name="net.omobio.airtelsc" />
+        <package android:name="teletalk.teletalkcustomerapp" />
+        <!-- Query launcher apps for custom configurable carrier apps -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="market" />

@@ -5,6 +5,8 @@ on:
     branches: [ main ]
     tags:
       - 'v*'
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -36,6 +38,36 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Determine release version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+            VERSION_NAME="${TAG_NAME#v}"
+          else
+            TAG_NAME="v1.0.${GITHUB_RUN_NUMBER}"
+            VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version_code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure release signing (if secrets provided)
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          cat <<EOF > keystore.properties
+          storeFile=release.jks
+          storePassword=${KEYSTORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
       - name: Verify lint
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" lintDebug
 
@@ -43,42 +75,40 @@ jobs:
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" testDebugUnitTest
 
       - name: Assemble Release APK
-        run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" assembleRelease
+        if: github.event_name != 'pull_request'
+        run: |
+          ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" assembleRelease \
+            -PversionCode="${{ steps.version.outputs.version_code }}" \
+            -PversionName="${{ steps.version.outputs.version_name }}"
 
       - name: Prepare Release Artifacts
+        if: github.event_name != 'pull_request'
         run: |
           mkdir -p release-artifacts
+          cp app/build/outputs/apk/release/app-release.apk "release-artifacts/VEMO_APP-${{ steps.version.outputs.tag_name }}.apk"
           cp app/build/outputs/apk/release/app-release.apk release-artifacts/VEMO_APP-release.apk
 
       - name: Upload Artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: VEMO_APP-release-apk
-          path: release-artifacts/VEMO_APP-release.apk
+          name: VEMO_APP-${{ steps.version.outputs.tag_name }}-apk
+          path: release-artifacts/*.apk
 
       - name: Publish GitHub Release
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="v1.0.0"
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            TAG_NAME="${GITHUB_REF_NAME}"
-          fi
-          
-          # Delete existing draft/release tag if clashing, or create/update release
-          gh release view "$TAG_NAME" >/dev/null 2>&1 && \
-            gh release upload "$TAG_NAME" release-artifacts/VEMO_APP-release.apk --clobber || \
-            gh release create "$TAG_NAME" release-artifacts/VEMO_APP-release.apk \
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          APK_VERSIONED="release-artifacts/VEMO_APP-${TAG_NAME}.apk"
+          APK_LATEST="release-artifacts/VEMO_APP-release.apk"
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "$APK_VERSIONED" "$APK_LATEST" --clobber
+          else
+            gh release create "$TAG_NAME" "$APK_VERSIONED" "$APK_LATEST" \
+              --target "$GITHUB_SHA" \
               --title "VEMO APP $TAG_NAME" \
-              --notes "### 🚀 VEMO APP $TAG_NAME
-
-          **Highlights:**
-          - 🌌 **Pure AMOLED (#000000)** high-contrast theme with Material You dynamic expressive accents.
-          - 📊 **Real-time Canvas Throughput Waveforms**: Live download/upload speed waveform graphs.
-          - 🍩 **Data Quota Donut Gauge**: 240° circular sweep donut gauge with threshold alerts and reset options.
-          - 📶 **Dual-band Wi-Fi & Device Manager**: Connected station list, 2.4GHz / 5GHz band switching, SSID & password config.
-          - 💬 **SMS & USSD Support**: Send/receive carrier SMS, check balances, run USSD queries.
-          - ⚙️ **LAN-only privacy**: No telemetry, no cloud servers, local HTTP communication.
-
-          **Download APK:**
-          Install \`VEMO_APP-release.apk\` below on Android 8.0+ (API 26+)."
+              --generate-notes
+          fi

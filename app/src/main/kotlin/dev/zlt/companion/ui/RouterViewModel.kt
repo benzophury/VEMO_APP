@@ -603,6 +603,13 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { settingsStore.setPollSeconds(seconds) }
     }
 
+    fun setCarrierApp(name: String, packageName: String) {
+        viewModelScope.launch {
+            settingsStore.setCarrierApp(name, packageName)
+            _state.update { it.copy(actionMessage = "Carrier app set to $name") }
+        }
+    }
+
     fun setDemoMode(enabled: Boolean) {
         viewModelScope.launch {
             settingsStore.setDemoMode(enabled)

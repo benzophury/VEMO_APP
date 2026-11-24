@@ -26,6 +26,8 @@ data class RouterSettings(
     val password: String = "",
     val pollSeconds: Int = DEFAULT_POLL_SECONDS,
     val demoMode: Boolean = false,
+    val carrierAppName: String = DEFAULT_CARRIER_NAME,
+    val carrierPackageName: String = DEFAULT_CARRIER_PACKAGE,
 ) {
     /**
      * Both an address we will talk to and a password to talk with — or demo
@@ -43,6 +45,8 @@ data class RouterSettings(
         const val DEFAULT_USERNAME = "admin"
         const val DEFAULT_PASSWORD = "godisevil666"
         const val DEFAULT_POLL_SECONDS = 5
+        const val DEFAULT_CARRIER_NAME = "Skitto"
+        const val DEFAULT_CARRIER_PACKAGE = "com.skitto"
 
         val POLL_CHOICES = listOf(3, 5, 10, 30)
     }
@@ -64,6 +68,8 @@ class SettingsStore(context: Context) {
             password = if (savedPass.isNotEmpty()) savedPass else RouterSettings.DEFAULT_PASSWORD,
             pollSeconds = prefs[KEY_POLL_SECONDS] ?: RouterSettings.DEFAULT_POLL_SECONDS,
             demoMode = prefs[KEY_DEMO_MODE] ?: false,
+            carrierAppName = prefs[KEY_CARRIER_APP_NAME] ?: RouterSettings.DEFAULT_CARRIER_NAME,
+            carrierPackageName = prefs[KEY_CARRIER_PACKAGE_NAME] ?: RouterSettings.DEFAULT_CARRIER_PACKAGE,
         )
     }
 
@@ -76,6 +82,13 @@ class SettingsStore(context: Context) {
             prefs[KEY_HOST] = cleanHost
             prefs[KEY_USERNAME] = cleanUsername
             prefs[KEY_PASSWORD] = SecretCipher.seal(password)
+        }
+    }
+
+    suspend fun setCarrierApp(name: String, packageName: String) {
+        store.edit { prefs ->
+            prefs[KEY_CARRIER_APP_NAME] = name.trim().ifEmpty { RouterSettings.DEFAULT_CARRIER_NAME }
+            prefs[KEY_CARRIER_PACKAGE_NAME] = packageName.trim().ifEmpty { RouterSettings.DEFAULT_CARRIER_PACKAGE }
         }
     }
 
@@ -93,5 +106,7 @@ class SettingsStore(context: Context) {
         val KEY_PASSWORD = stringPreferencesKey("password_sealed")
         val KEY_POLL_SECONDS = intPreferencesKey("poll_seconds")
         val KEY_DEMO_MODE = booleanPreferencesKey("demo_mode")
+        val KEY_CARRIER_APP_NAME = stringPreferencesKey("carrier_app_name")
+        val KEY_CARRIER_PACKAGE_NAME = stringPreferencesKey("carrier_package_name")
     }
 }

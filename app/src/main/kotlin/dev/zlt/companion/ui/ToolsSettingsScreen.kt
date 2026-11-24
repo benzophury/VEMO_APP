@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +32,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -68,14 +73,18 @@ import dev.zlt.companion.ui.theme.TextSecondary
 fun ToolsSettingsScreen(
     networkSettings: NetworkSettings?,
     lanSettings: LanSettings?,
+    carrierAppName: String = AppLauncher.DEFAULT_CARRIER_NAME,
+    carrierPackageName: String = AppLauncher.DEFAULT_CARRIER_PACKAGE,
     onSaveNetworkSettings: (String, Boolean) -> Unit,
     onSaveLanSettings: (LanSettings) -> Unit,
     onSaveApn: (String, String, String) -> Unit,
+    onSaveCarrierApp: (String, String) -> Unit = { _, _ -> },
     onChangePassword: (String, String) -> Unit,
     onFactoryReset: () -> Unit,
     onReboot: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showCarrierDialog by remember { mutableStateOf(false) }
     var showApnDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showResetConfirm by remember { mutableStateOf(false) }
@@ -126,33 +135,56 @@ fun ToolsSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = NeonYellow)
-                        Text(
-                            text = "CARRIER APP (SKITTO)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextSecondary,
-                            letterSpacing = 1.sp,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = NeonYellow)
+                            Text(
+                                text = "CARRIER APP (${carrierAppName.uppercase()})",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextSecondary,
+                                letterSpacing = 1.sp,
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = { showCarrierDialog = true },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                            androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+                            Text("Change", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
 
                     Text(
-                        text = "Quickly launch Skitto self-care app to reload balance, buy data bundles, and check validity.",
+                        text = "Quickly launch $carrierAppName self-care app to reload balance, buy data bundles, and check validity.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted,
                     )
 
+                    Text(
+                        text = "Package: $carrierPackageName",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    )
+
                     Button(
-                        onClick = { AppLauncher.launchCarrierApp(context) },
+                        onClick = { AppLauncher.launchCarrierApp(context, carrierPackageName) },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonYellow, contentColor = Color.Black),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Default.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
                         androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
-                        Text("Open Skitto App", fontWeight = FontWeight.Bold)
+                        Text("Open $carrierAppName App", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -347,6 +379,18 @@ fun ToolsSettingsScreen(
     }
 
     // Dialogs
+    if (showCarrierDialog) {
+        CarrierAppDialog(
+            currentName = carrierAppName,
+            currentPackage = carrierPackageName,
+            onDismiss = { showCarrierDialog = false },
+            onConfirm = { newName, newPkg ->
+                showCarrierDialog = false
+                onSaveCarrierApp(newName, newPkg)
+            },
+        )
+    }
+
     if (showApnDialog) {
         ApnDialog(
             onDismiss = { showApnDialog = false },
@@ -517,6 +561,92 @@ private fun PasswordDialog(
                 enabled = oldPass.isNotBlank() && newPass.length >= 6,
             ) {
                 Text("Update Password")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun CarrierAppDialog(
+    currentName: String,
+    currentPackage: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit,
+) {
+    var name by remember { mutableStateOf(currentName) }
+    var packageName by remember { mutableStateOf(currentPackage) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configure Carrier App") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Select a carrier preset or enter a custom package name for your pocket router's SIM provider.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    text = "Presets",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    AppLauncher.PRESETS.forEach { preset ->
+                        val isSelected = packageName.equals(preset.packageName, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                name = preset.name.substringBefore(" (")
+                                packageName = preset.packageName
+                            },
+                            label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("App Display Name") },
+                    placeholder = { Text("e.g. Skitto, MyGP, MyBL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                OutlinedTextField(
+                    value = packageName,
+                    onValueChange = { packageName = it },
+                    label = { Text("Android Package Name") },
+                    placeholder = { Text("e.g. com.skitto") },
+                    supportingText = { Text("Must match the installed APK's package name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name.trim(), packageName.trim()) },
+                enabled = name.isNotBlank() && packageName.isNotBlank(),
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {
