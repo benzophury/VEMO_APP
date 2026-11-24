@@ -53,20 +53,23 @@ jobs:
           echo "version_code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Configure release signing (if secrets provided)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
-          cat <<EOF > keystore.properties
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+            cat <<EOF > keystore.properties
           storeFile=release.jks
           storePassword=${KEYSTORE_PASSWORD}
           keyAlias=${KEY_ALIAS}
           keyPassword=${KEY_PASSWORD}
           EOF
+          else
+            echo "No KEYSTORE_BASE64 secret configured; using fallback signing."
+          fi
 
       - name: Verify lint
         run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" lintDebug
