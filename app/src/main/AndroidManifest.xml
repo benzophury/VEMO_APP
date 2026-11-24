@@ -14,6 +14,10 @@
         <package android:name="net.omobio.robisc" />
         <package android:name="net.omobio.airtelsc" />
         <package android:name="teletalk.teletalkcustomerapp" />
+        <!-- Common home/other router apps -->
+        <package android:name="com.tplink.tether" />
+        <package android:name="com.tenda.router.app" />
+        <package android:name="com.asus.aihome" />
         <!-- Query launcher apps for custom configurable carrier apps -->
         <intent>
             <action android:name="android.intent.action.MAIN" />

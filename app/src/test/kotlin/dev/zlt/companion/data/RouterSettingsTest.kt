@@ -42,4 +42,23 @@ class RouterSettingsTest {
         org.junit.Assert.assertEquals("MyGP", settings.carrierAppName)
         org.junit.Assert.assertEquals("com.portonics.mygp", settings.carrierPackageName)
     }
+
+    @Test
+    fun `carrier auto-match and fallback router app have sensible defaults`() {
+        val settings = RouterSettings()
+        assertTrue(settings.autoMatchCarrierApp)
+        org.junit.Assert.assertEquals("TP-Link Tether", settings.fallbackRouterAppName)
+        org.junit.Assert.assertEquals("com.tplink.tether", settings.fallbackRouterPackageName)
+    }
+
+    @Test
+    fun `matchCarrierForOperator resolves Bangladesh operators`() {
+        org.junit.Assert.assertEquals("com.portonics.mygp", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("GrameenPhone")?.packageName)
+        org.junit.Assert.assertEquals("com.skitto", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("skitto")?.packageName)
+        org.junit.Assert.assertEquals("net.banglalink.mybl", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("Banglalink")?.packageName)
+        org.junit.Assert.assertEquals("net.omobio.robisc", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("Robi")?.packageName)
+        org.junit.Assert.assertEquals("net.omobio.airtelsc", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("Airtel")?.packageName)
+        org.junit.Assert.assertEquals("teletalk.teletalkcustomerapp", dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("Teletalk")?.packageName)
+        org.junit.Assert.assertNull(dev.zlt.companion.util.AppLauncher.matchCarrierForOperator("UnknownTelco"))
+    }
 }

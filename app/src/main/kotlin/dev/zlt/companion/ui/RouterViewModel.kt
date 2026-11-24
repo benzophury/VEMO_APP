@@ -603,10 +603,18 @@ class RouterViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { settingsStore.setPollSeconds(seconds) }
     }
 
-    fun setCarrierApp(name: String, packageName: String) {
+    fun setCarrierApp(name: String, packageName: String, autoMatch: Boolean = false) {
         viewModelScope.launch {
-            settingsStore.setCarrierApp(name, packageName)
-            _state.update { it.copy(actionMessage = "Carrier app set to $name") }
+            settingsStore.setCarrierApp(name, packageName, autoMatch)
+            val msg = if (autoMatch) "Carrier app set to auto-match SIM" else "Carrier app set to $name"
+            _state.update { it.copy(actionMessage = msg) }
+        }
+    }
+
+    fun setFallbackRouterApp(name: String, packageName: String) {
+        viewModelScope.launch {
+            settingsStore.setFallbackRouterApp(name, packageName)
+            _state.update { it.copy(actionMessage = "Other router app set to $name") }
         }
     }
 

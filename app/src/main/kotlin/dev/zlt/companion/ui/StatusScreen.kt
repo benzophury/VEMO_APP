@@ -80,6 +80,8 @@ fun StatusScreen(
     demoMode: Boolean,
     carrierAppName: String = AppLauncher.DEFAULT_CARRIER_NAME,
     carrierPackageName: String = AppLauncher.DEFAULT_CARRIER_PACKAGE,
+    fallbackRouterAppName: String = AppLauncher.DEFAULT_ROUTER_APP_NAME,
+    fallbackRouterPackageName: String = AppLauncher.DEFAULT_ROUTER_APP_PACKAGE,
     onRefresh: () -> Unit,
     onOpenSettings: () -> Unit,
     onExitDemo: () -> Unit,
@@ -148,17 +150,47 @@ fun StatusScreen(
                 exit = fadeOut(tween(200)) + shrinkOut(tween(200)),
             ) {
                 state.error?.let { message ->
+                    val context = LocalContext.current
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF330005)),
                         border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.6f)),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = NeonRed,
+                        Column(
                             modifier = Modifier.padding(14.dp),
-                        )
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                text = message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NeonRed,
+                            )
+                            Surface(
+                                onClick = { AppLauncher.launchApp(context, fallbackRouterPackageName) },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                color = NeonCyan.copy(alpha = 0.12f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Launch,
+                                        contentDescription = null,
+                                        tint = NeonCyan,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Text(
+                                        text = "On another router? Open $fallbackRouterAppName",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = NeonCyan,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

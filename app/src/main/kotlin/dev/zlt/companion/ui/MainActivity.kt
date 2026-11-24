@@ -206,14 +206,24 @@ private fun AppRoot(
                 },
                 label = "TabTransition"
             ) { targetTab ->
+                val matchedCarrier = if (current.autoMatchCarrierApp) {
+                    dev.zlt.companion.util.AppLauncher.matchCarrierForOperator(state.status?.networkProvider)
+                } else {
+                    null
+                }
+                val effectiveCarrierName = matchedCarrier?.name ?: current.carrierAppName
+                val effectiveCarrierPackage = matchedCarrier?.packageName ?: current.carrierPackageName
+
                 when (targetTab) {
                     AppTab.DASHBOARD -> {
                         StatusScreen(
                             state = state,
                             host = current.host,
                             demoMode = current.demoMode,
-                            carrierAppName = current.carrierAppName,
-                            carrierPackageName = current.carrierPackageName,
+                            carrierAppName = effectiveCarrierName,
+                            carrierPackageName = effectiveCarrierPackage,
+                            fallbackRouterAppName = current.fallbackRouterAppName,
+                            fallbackRouterPackageName = current.fallbackRouterPackageName,
                             onRefresh = { viewModel.refresh() },
                             onOpenSettings = { settingsOpen = true },
                             onExitDemo = { viewModel.setDemoMode(false) },
@@ -261,12 +271,16 @@ private fun AppRoot(
                         ToolsSettingsScreen(
                             networkSettings = state.networkSettings,
                             lanSettings = state.lanSettings,
-                            carrierAppName = current.carrierAppName,
-                            carrierPackageName = current.carrierPackageName,
+                            carrierAppName = effectiveCarrierName,
+                            carrierPackageName = effectiveCarrierPackage,
+                            autoMatchCarrierApp = current.autoMatchCarrierApp,
+                            fallbackRouterAppName = current.fallbackRouterAppName,
+                            fallbackRouterPackageName = current.fallbackRouterPackageName,
                             onSaveNetworkSettings = { mode, roam -> viewModel.saveNetworkSettings(mode, roam) },
                             onSaveLanSettings = { lan -> viewModel.saveLanSettings(lan) },
                             onSaveApn = { name, apn, auth -> viewModel.saveApn(name, apn, auth) },
-                            onSaveCarrierApp = { name, pkg -> viewModel.setCarrierApp(name, pkg) },
+                            onSaveCarrierApp = { name, pkg, auto -> viewModel.setCarrierApp(name, pkg, auto) },
+                            onSaveFallbackRouterApp = { name, pkg -> viewModel.setFallbackRouterApp(name, pkg) },
                             onChangePassword = { old, new -> viewModel.changeAdminPassword(old, new) },
                             onFactoryReset = { viewModel.factoryReset() },
                             onReboot = { viewModel.rebootRouter() },

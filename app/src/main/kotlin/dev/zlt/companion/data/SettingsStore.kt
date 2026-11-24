@@ -28,6 +28,9 @@ data class RouterSettings(
     val demoMode: Boolean = false,
     val carrierAppName: String = DEFAULT_CARRIER_NAME,
     val carrierPackageName: String = DEFAULT_CARRIER_PACKAGE,
+    val autoMatchCarrierApp: Boolean = true,
+    val fallbackRouterAppName: String = DEFAULT_ROUTER_APP_NAME,
+    val fallbackRouterPackageName: String = DEFAULT_ROUTER_APP_PACKAGE,
 ) {
     /**
      * Both an address we will talk to and a password to talk with — or demo
@@ -47,6 +50,8 @@ data class RouterSettings(
         const val DEFAULT_POLL_SECONDS = 5
         const val DEFAULT_CARRIER_NAME = "Skitto"
         const val DEFAULT_CARRIER_PACKAGE = "com.skitto"
+        const val DEFAULT_ROUTER_APP_NAME = "TP-Link Tether"
+        const val DEFAULT_ROUTER_APP_PACKAGE = "com.tplink.tether"
 
         val POLL_CHOICES = listOf(3, 5, 10, 30)
     }
@@ -70,6 +75,9 @@ class SettingsStore(context: Context) {
             demoMode = prefs[KEY_DEMO_MODE] ?: false,
             carrierAppName = prefs[KEY_CARRIER_APP_NAME] ?: RouterSettings.DEFAULT_CARRIER_NAME,
             carrierPackageName = prefs[KEY_CARRIER_PACKAGE_NAME] ?: RouterSettings.DEFAULT_CARRIER_PACKAGE,
+            autoMatchCarrierApp = prefs[KEY_AUTO_MATCH_CARRIER] ?: true,
+            fallbackRouterAppName = prefs[KEY_FALLBACK_ROUTER_APP_NAME] ?: RouterSettings.DEFAULT_ROUTER_APP_NAME,
+            fallbackRouterPackageName = prefs[KEY_FALLBACK_ROUTER_PACKAGE_NAME] ?: RouterSettings.DEFAULT_ROUTER_APP_PACKAGE,
         )
     }
 
@@ -85,10 +93,18 @@ class SettingsStore(context: Context) {
         }
     }
 
-    suspend fun setCarrierApp(name: String, packageName: String) {
+    suspend fun setCarrierApp(name: String, packageName: String, autoMatch: Boolean = false) {
         store.edit { prefs ->
             prefs[KEY_CARRIER_APP_NAME] = name.trim().ifEmpty { RouterSettings.DEFAULT_CARRIER_NAME }
             prefs[KEY_CARRIER_PACKAGE_NAME] = packageName.trim().ifEmpty { RouterSettings.DEFAULT_CARRIER_PACKAGE }
+            prefs[KEY_AUTO_MATCH_CARRIER] = autoMatch
+        }
+    }
+
+    suspend fun setFallbackRouterApp(name: String, packageName: String) {
+        store.edit { prefs ->
+            prefs[KEY_FALLBACK_ROUTER_APP_NAME] = name.trim().ifEmpty { RouterSettings.DEFAULT_ROUTER_APP_NAME }
+            prefs[KEY_FALLBACK_ROUTER_PACKAGE_NAME] = packageName.trim().ifEmpty { RouterSettings.DEFAULT_ROUTER_APP_PACKAGE }
         }
     }
 
@@ -108,5 +124,8 @@ class SettingsStore(context: Context) {
         val KEY_DEMO_MODE = booleanPreferencesKey("demo_mode")
         val KEY_CARRIER_APP_NAME = stringPreferencesKey("carrier_app_name")
         val KEY_CARRIER_PACKAGE_NAME = stringPreferencesKey("carrier_package_name")
+        val KEY_AUTO_MATCH_CARRIER = booleanPreferencesKey("auto_match_carrier")
+        val KEY_FALLBACK_ROUTER_APP_NAME = stringPreferencesKey("fallback_router_app_name")
+        val KEY_FALLBACK_ROUTER_PACKAGE_NAME = stringPreferencesKey("fallback_router_package_name")
     }
 }

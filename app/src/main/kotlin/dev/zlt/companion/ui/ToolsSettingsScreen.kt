@@ -75,16 +75,21 @@ fun ToolsSettingsScreen(
     lanSettings: LanSettings?,
     carrierAppName: String = AppLauncher.DEFAULT_CARRIER_NAME,
     carrierPackageName: String = AppLauncher.DEFAULT_CARRIER_PACKAGE,
+    autoMatchCarrierApp: Boolean = true,
+    fallbackRouterAppName: String = AppLauncher.DEFAULT_ROUTER_APP_NAME,
+    fallbackRouterPackageName: String = AppLauncher.DEFAULT_ROUTER_APP_PACKAGE,
     onSaveNetworkSettings: (String, Boolean) -> Unit,
     onSaveLanSettings: (LanSettings) -> Unit,
     onSaveApn: (String, String, String) -> Unit,
-    onSaveCarrierApp: (String, String) -> Unit = { _, _ -> },
+    onSaveCarrierApp: (String, String, Boolean) -> Unit = { _, _, _ -> },
+    onSaveFallbackRouterApp: (String, String) -> Unit = { _, _ -> },
     onChangePassword: (String, String) -> Unit,
     onFactoryReset: () -> Unit,
     onReboot: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showCarrierDialog by remember { mutableStateOf(false) }
+    var showFallbackRouterDialog by remember { mutableStateOf(false) }
     var showApnDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showResetConfirm by remember { mutableStateOf(false) }
@@ -171,7 +176,11 @@ fun ToolsSettingsScreen(
                     )
 
                     Text(
-                        text = "Package: $carrierPackageName",
+                        text = if (autoMatchCarrierApp) {
+                            "Package: $carrierPackageName (Auto-matched from SIM)"
+                        } else {
+                            "Package: $carrierPackageName"
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
@@ -185,6 +194,70 @@ fun ToolsSettingsScreen(
                         Icon(Icons.Default.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
                         androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
                         Text("Open $carrierAppName App", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Home / Other Router App Card (fallback when U30S+ isn't reachable)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(Icons.Default.Lan, contentDescription = null, tint = NeonCyan)
+                            Text(
+                                text = "OTHER ROUTER APP",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextSecondary,
+                                letterSpacing = 1.sp,
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = { showFallbackRouterDialog = true },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                            androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+                            Text("Change", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    Text(
+                        text = "One-tap shortcut shown when the U30S+ isn't reachable (e.g. when you're on your home Wi-Fi).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted,
+                    )
+
+                    Text(
+                        text = "$fallbackRouterAppName • $fallbackRouterPackageName",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    )
+
+                    OutlinedButton(
+                        onClick = { AppLauncher.launchApp(context, fallbackRouterPackageName) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                        Text("Open $fallbackRouterAppName")
                     }
                 }
             }
@@ -380,13 +453,60 @@ fun ToolsSettingsScreen(
 
     // Dialogs
     if (showCarrierDialog) {
-        CarrierAppDialog(
+        var autoMatch by remember { mutableStateOf(autoMatchCarrierApp) }
+        AppConfigDialog(
+            title = "Configure Carrier App",
+            description = "Select a carrier preset or enter a custom package name for your pocket router's SIM provider.",
+            presets = AppLauncher.PRESETS,
             currentName = carrierAppName,
             currentPackage = carrierPackageName,
+            namePlaceholder = "e.g. Skitto, MyGP, MyBL",
+            packagePlaceholder = "e.g. com.skitto",
+            extraContent = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Auto-match by SIM",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "Automatically switch app based on active carrier",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = autoMatch,
+                        onCheckedChange = { autoMatch = it },
+                    )
+                }
+            },
             onDismiss = { showCarrierDialog = false },
             onConfirm = { newName, newPkg ->
                 showCarrierDialog = false
-                onSaveCarrierApp(newName, newPkg)
+                onSaveCarrierApp(newName, newPkg, autoMatch)
+            },
+        )
+    }
+
+    if (showFallbackRouterDialog) {
+        AppConfigDialog(
+            title = "Configure Other Router App",
+            description = "Select a router app to launch in one tap when the U30S+ isn't reachable.",
+            presets = AppLauncher.ROUTER_PRESETS,
+            currentName = fallbackRouterAppName,
+            currentPackage = fallbackRouterPackageName,
+            namePlaceholder = "e.g. TP-Link Tether",
+            packagePlaceholder = "e.g. com.tplink.tether",
+            onDismiss = { showFallbackRouterDialog = false },
+            onConfirm = { newName, newPkg ->
+                showFallbackRouterDialog = false
+                onSaveFallbackRouterApp(newName, newPkg)
             },
         )
     }
@@ -492,6 +612,32 @@ private fun ApnDialog(
         title = { Text("APN Configuration") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "BD Carrier Presets",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    AppLauncher.APN_PRESETS.forEach { preset ->
+                        val isSelected = apn.equals(preset.apn, ignoreCase = true) &&
+                            profileName.equals(preset.profileName, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                profileName = preset.profileName
+                                apn = preset.apn
+                                authMode = preset.authMode
+                            },
+                            label = { Text(preset.label, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
@@ -572,9 +718,15 @@ private fun PasswordDialog(
 }
 
 @Composable
-private fun CarrierAppDialog(
+private fun AppConfigDialog(
+    title: String,
+    description: String,
+    presets: List<dev.zlt.companion.util.CarrierPreset>,
     currentName: String,
     currentPackage: String,
+    namePlaceholder: String,
+    packagePlaceholder: String,
+    extraContent: (@Composable () -> Unit)? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit,
 ) {
@@ -583,14 +735,14 @@ private fun CarrierAppDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Configure Carrier App") },
+        title = { Text(title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Select a carrier preset or enter a custom package name for your pocket router's SIM provider.",
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -608,7 +760,7 @@ private fun CarrierAppDialog(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    AppLauncher.PRESETS.forEach { preset ->
+                    presets.forEach { preset ->
                         val isSelected = packageName.equals(preset.packageName, ignoreCase = true)
                         FilterChip(
                             selected = isSelected,
@@ -625,7 +777,7 @@ private fun CarrierAppDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("App Display Name") },
-                    placeholder = { Text("e.g. Skitto, MyGP, MyBL") },
+                    placeholder = { Text(namePlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -634,11 +786,13 @@ private fun CarrierAppDialog(
                     value = packageName,
                     onValueChange = { packageName = it },
                     label = { Text("Android Package Name") },
-                    placeholder = { Text("e.g. com.skitto") },
+                    placeholder = { Text(packagePlaceholder) },
                     supportingText = { Text("Must match the installed APK's package name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                extraContent?.invoke()
             }
         },
         confirmButton = {
